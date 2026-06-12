@@ -1,0 +1,52 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+# ただし「見本（値は空）」だけは共有する
+!.env.local.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# このプロジェクト独自の追加（Git に上げないもの）
+# ローカルの用語データ（当面のDB代わり。DB確定後に廃止）
+/.data/
+# AIが生成したイラストの保存先（容量が大きいので共有しない）
+/public/generated/
+# 使い捨てスクリプト・実験・一時メモの隔離場所（フォルダだけは残す）
+/scratch/*
+!/scratch/.gitkeep
