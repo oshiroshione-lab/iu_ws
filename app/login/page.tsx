@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { ALLOWED_MEMBERS, ACCESS_CODE } from "@/lib/config";
 import { LoginForm } from "@/components/LoginForm";
+import { Card } from "@/components/ui/Card";
+import { BookIcon } from "@/components/ui/icons";
 
 export default async function LoginPage() {
   const user = await getCurrentUser();
@@ -13,16 +15,25 @@ export default async function LoginPage() {
   const devMode = ALLOWED_MEMBERS.length === 0 && ACCESS_CODE === "";
 
   return (
-    <div className="mx-auto flex max-w-sm flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold">ログイン</h1>
-        <p className="mt-1 text-sm text-gray-500">チーム3人だけが使える辞書です。</p>
+    <div className="mx-auto flex max-w-sm animate-fade-in flex-col gap-6 py-8">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+          <BookIcon className="h-6 w-6" />
+        </span>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">私たちの辞書</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            チーム3人だけが使える辞書です。
+          </p>
+        </div>
       </div>
 
-      <LoginForm />
+      <Card className="p-6">
+        <LoginForm />
+      </Card>
 
       {devMode && (
-        <p className="rounded-md bg-gray-50 px-3 py-2 text-xs text-gray-500">
+        <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
           （開発モード）メンバー名・合言葉が未設定のため、いまはどんな名前でも入れます。
           本番では <code>.env.local</code> の <code>ALLOWED_MEMBERS</code> と{" "}
           <code>ACCESS_CODE</code> を設定してください。

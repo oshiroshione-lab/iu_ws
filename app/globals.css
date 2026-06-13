@@ -1,19 +1,169 @@
 @import "tailwindcss";
 
+/*
+  デザイントークン（このアプリの“色・形の決まりごと”）をここに集約する。
+  画面は生の色（gray-200 など）を直接使わず、ここで決めた「意味の名前」
+  （bg-background / text-foreground / border-border / bg-primary など）だけを使う。
+  こうしておくと、配色を変えたいときも基本このファイルだけ直せば全体に反映される。
+
+  ・色は OKLCH 形式（明るさが知覚どおりに揃うので、ライト/ダークがきれいに作れる）。
+  ・ライトは :root、ダークは .dark で同じ名前を上書きするだけ。
+  ・デザイン方向は「クリーン・ミニマル」（ニュートラルなグレー基調＋インディゴのアクセント）。
+*/
+
+/* class="dark" が付いたときに dark: ユーティリティを効かせる（OS設定ではなくクラスで切替） */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #f8fafc;
-  --foreground: #171717;
+  /* 面と文字 */
+  --background: oklch(0.99 0 0); /* ほぼ白 */
+  --foreground: oklch(0.21 0.012 286); /* 黒に近い濃いグレー */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.012 286);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.012 286);
+
+  /* アクセント（インディゴ） */
+  --primary: oklch(0.55 0.21 277);
+  --primary-foreground: oklch(0.98 0.01 277);
+
+  /* 控えめな面・文字 */
+  --secondary: oklch(0.97 0.004 286);
+  --secondary-foreground: oklch(0.3 0.012 286);
+  --muted: oklch(0.97 0.004 286);
+  --muted-foreground: oklch(0.55 0.012 286);
+  --accent: oklch(0.96 0.02 277); /* ホバー時のうっすらインディゴ */
+  --accent-foreground: oklch(0.4 0.13 277);
+
+  /* 危険（削除など） */
+  --destructive: oklch(0.58 0.22 27);
+  --destructive-foreground: oklch(0.98 0.01 27);
+
+  /* 線・入力枠・フォーカスリング */
+  --border: oklch(0.92 0.004 286);
+  --input: oklch(0.92 0.004 286);
+  --ring: oklch(0.55 0.21 277);
+
+  /* 角丸の基準（10px）。派生は @theme で作る */
+  --radius: 0.625rem;
 }
 
+.dark {
+  --background: oklch(0.17 0.006 286); /* 真っ黒ではない、濃いチャコール */
+  --foreground: oklch(0.96 0.003 286);
+  --card: oklch(0.21 0.007 286);
+  --card-foreground: oklch(0.96 0.003 286);
+  --popover: oklch(0.21 0.007 286);
+  --popover-foreground: oklch(0.96 0.003 286);
+
+  --primary: oklch(0.66 0.18 277); /* 暗い背景で映えるよう少し明るく */
+  --primary-foreground: oklch(0.16 0.02 277);
+
+  --secondary: oklch(0.27 0.008 286);
+  --secondary-foreground: oklch(0.92 0.004 286);
+  --muted: oklch(0.27 0.008 286);
+  --muted-foreground: oklch(0.71 0.01 286);
+  --accent: oklch(0.32 0.04 277);
+  --accent-foreground: oklch(0.92 0.02 277);
+
+  --destructive: oklch(0.62 0.2 25);
+  --destructive-foreground: oklch(0.97 0.01 25);
+
+  --border: oklch(0.29 0.008 286);
+  --input: oklch(0.32 0.008 286);
+  --ring: oklch(0.66 0.18 277);
+}
+
+/* トークンを Tailwind のユーティリティ名に紐付ける（bg-*, text-*, border-*, rounded-* など） */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  /* スケルトンのキラッと光るアニメ／コンテンツのふわっと表示 */
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-fade-in: fade-in 0.4s ease-out both;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  /* OS標準の日本語フォントを使う（外部フォントを読み込まないのでオフラインでも安心） */
-  font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN",
-    "Yu Gothic", Meiryo, sans-serif;
+@keyframes shimmer {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer base {
+  /* border ユーティリティの既定色をトークンに（border だけで意図どおりの線色になる） */
+  *,
+  ::after,
+  ::before {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    /* OS標準フォントを使う（外部フォントを読み込まないのでオフラインでも安心）。
+       見た目のモダンさは配色・余白・文字組みで作る。 */
+    font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN",
+      "Yu Gothic", Meiryo, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* キーボード操作時のフォーカスを見やすく（アクセシビリティ） */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* アニメを控えたいユーザーの設定を尊重する */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
 }

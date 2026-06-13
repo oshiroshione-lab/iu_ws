@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import "./globals.css";
+import { cn } from "@/lib/cn";
 import { getCurrentUser } from "@/lib/auth";
 import { logoutAction } from "@/app/actions";
+import { buttonClasses } from "@/components/ui/Button";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { BookIcon, PlusIcon, FileTextIcon } from "@/components/ui/icons";
 
 export const metadata: Metadata = {
   title: "私たちの辞書 — iUナレッジWS",
@@ -14,38 +19,73 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const user = await getCurrentUser();
+  const [user, cookieStore] = await Promise.all([getCurrentUser(), cookies()]);
+  // テーマは cookie で覚えておく。ここでクラスを決めるので、開いた瞬間のちらつきが出ない。
+  const isDark = cookieStore.get("theme")?.value === "dark";
 
   return (
-    <html lang="ja" className="h-full">
-      <body className="flex min-h-full flex-col">
-        <header className="border-b border-gray-200 bg-white">
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-            <Link href="/" className="text-lg font-bold text-gray-900">
-              📚 私たちの辞書
+    <html lang="ja" className={cn("h-full", isDark && "dark")} suppressHydrationWarning>
+      <body className="flex min-h-full flex-col bg-background text-foreground">
+        <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4">
+            <Link
+              href="/"
+              className="flex items-center gap-2 font-semibold tracking-tight text-foreground"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <BookIcon className="h-4 w-4" />
+              </span>
+              私たちの辞書
             </Link>
-            {user && (
-              <nav className="flex items-center gap-4 text-sm">
-                <Link
-                  href="/terms/new"
-                  className="rounded-md bg-blue-600 px-3 py-1.5 font-medium text-white hover:bg-blue-700"
-                >
-                  ＋ 用語を登録
-                </Link>
-                <span className="text-gray-500">👤 {user}</span>
-                <form action={logoutAction}>
-                  <button type="submit" className="text-gray-500 hover:underline">
-                    ログアウト
-                  </button>
-                </form>
-              </nav>
-            )}
+
+            <nav className="flex items-center gap-1 sm:gap-2">
+              {user ? (
+                <>
+                  <Link
+                    href="/terms/extract"
+                    className={cn(
+                      buttonClasses({ variant: "ghost", size: "sm" }),
+                      "hidden text-muted-foreground sm:inline-flex",
+                    )}
+                  >
+                    <FileTextIcon className="h-4 w-4" />
+                    議事録から登録
+                  </Link>
+                  <Link
+                    href="/terms/new"
+                    className={buttonClasses({ variant: "primary", size: "sm" })}
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    用語を登録
+                  </Link>
+                  <ThemeToggle />
+                  <span className="hidden items-center gap-1.5 px-2 text-sm text-muted-foreground md:inline-flex">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-xs font-medium text-secondary-foreground">
+                      {user.slice(0, 1)}
+                    </span>
+                    {user}
+                  </span>
+                  <form action={logoutAction}>
+                    <button
+                      type="submit"
+                      className={buttonClasses({ variant: "ghost", size: "sm" })}
+                    >
+                      ログアウト
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <ThemeToggle />
+              )}
+            </nav>
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+          {children}
+        </main>
 
-        <footer className="border-t border-gray-200 py-4 text-center text-xs text-gray-400">
+        <footer className="border-t py-5 text-center text-xs text-muted-foreground">
           iUナレッジWS — チーム3人の辞書
         </footer>
       </body>

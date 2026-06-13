@@ -17,11 +17,37 @@ import type { TermRepository } from "./repository";
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DATA_FILE = path.join(DATA_DIR, "terms.json");
 
+/**
+ * 保存ファイルの1件を、いまの Term の形に整える。
+ * 古い時期に保存したデータには tags などが無いので、欠けていれば既定値で補う
+ * （= 後方互換。新しい項目を足してもアプリが壊れないようにする）。
+ */
+function normalizeTerm(raw: unknown): Term {
+  const t = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: String(t.id ?? ""),
+    word: String(t.word ?? ""),
+    description: String(t.description ?? ""),
+    relatedWords: Array.isArray(t.relatedWords)
+      ? (t.relatedWords.filter((w) => typeof w === "string") as string[])
+      : [],
+    tags: Array.isArray(t.tags)
+      ? (t.tags.filter((w) => typeof w === "string") as string[])
+      : [],
+    imageUrl: typeof t.imageUrl === "string" ? t.imageUrl : null,
+    imageStatus:
+      t.imageStatus === "ok" || t.imageStatus === "failed" ? t.imageStatus : "none",
+    createdBy: String(t.createdBy ?? ""),
+    createdAt: String(t.createdAt ?? ""),
+    updatedAt: String(t.updatedAt ?? ""),
+  };
+}
+
 async function readAll(): Promise<Term[]> {
   try {
     const text = await fs.readFile(DATA_FILE, "utf8");
     const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? (parsed as Term[]) : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeTerm) : [];
   } catch {
     // ファイルがまだ無い／壊れている場合は空とみなす
     return [];
@@ -48,7 +74,7 @@ export class JsonTermRepository implements TermRepository {
     if (q === "") return this.list();
     const all = await readAll();
     const hit = all.filter((t) => {
-      const haystack = [t.word, t.description, ...t.relatedWords]
+      const haystack = [t.word, t.description, ...t.relatedWords, ...t.tags]
         .join(" ")
         .toLowerCase();
       return haystack.includes(q);
@@ -69,6 +95,7 @@ export class JsonTermRepository implements TermRepository {
       word: data.word,
       description: data.description,
       relatedWords: data.relatedWords,
+      tags: data.tags,
       imageUrl: data.imageUrl,
       imageStatus: data.imageStatus,
       createdBy: data.createdBy,

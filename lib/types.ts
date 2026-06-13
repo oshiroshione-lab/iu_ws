@@ -14,6 +14,8 @@ export interface Term {
   description: string;
   /** 関連ワード（0件のこともある） */
   relatedWords: string[];
+  /** タグ（広いカテゴリ。例: AI / 統計 / Web）。0件のこともある */
+  tags: string[];
   /** 生成イラストの場所（無いこともある） */
   imageUrl: string | null;
   /** イラストの状態 */
@@ -31,6 +33,7 @@ export interface NewTermData {
   word: string;
   description: string;
   relatedWords: string[];
+  tags: string[];
   imageUrl: string | null;
   imageStatus: ImageStatus;
   createdBy: string;
@@ -38,5 +41,8 @@ export interface NewTermData {
 
 /** 用語を部分的に更新するときに渡せる項目 */
 export type TermPatch = Partial<
-  Pick<Term, "word" | "description" | "relatedWords" | "imageUrl" | "imageStatus">
+  Pick<
+    Term,
+    "word" | "description" | "relatedWords" | "tags" | "imageUrl" | "imageStatus"
+  >
 >;

@@ -1,21 +1,16 @@
-// 用語の新規登録ページ（F-01）。
-// 関連ワードから飛んできた場合は ?word=... で用語名を最初から入れておく（F-08）。
+// 議事録から用語を自動登録するページ。
+// 文章を貼り付けると、AIが専門用語を抽出して、1つずつ辞書に登録する。
 
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { hasOpenAIKey } from "@/lib/config";
 import { cn } from "@/lib/cn";
-import { TermRegisterForm } from "@/components/TermRegisterForm";
+import { ExtractForm } from "@/components/ExtractForm";
 import { buttonClasses } from "@/components/ui/Button";
-import { ArrowLeftIcon } from "@/components/ui/icons";
+import { ArrowLeftIcon, FileTextIcon } from "@/components/ui/icons";
 
-export default async function NewTermPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ word?: string }>;
-}) {
+export default async function ExtractPage() {
   await requireUser();
-  const { word } = await searchParams;
 
   return (
     <div className="mx-auto flex max-w-xl animate-fade-in flex-col gap-6">
@@ -30,7 +25,13 @@ export default async function NewTermPage({
           <ArrowLeftIcon className="h-4 w-4" />
           一覧へ戻る
         </Link>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">用語を登録</h1>
+        <h1 className="mt-2 flex items-center gap-2 text-2xl font-bold tracking-tight">
+          <FileTextIcon className="h-6 w-6 text-primary" />
+          議事録から用語を登録
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          会議の文字起こしやメモを貼り付けると、AIが専門用語を見つけて、まとめて辞書に登録します。
+        </p>
       </div>
 
       {!hasOpenAIKey && (
@@ -40,7 +41,7 @@ export default async function NewTermPage({
         </p>
       )}
 
-      <TermRegisterForm defaultWord={word ?? ""} />
+      <ExtractForm />
     </div>
   );
 }

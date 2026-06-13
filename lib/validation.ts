@@ -8,6 +8,12 @@ export const WORD_MAX_LENGTH = 100;
 /** 説明文の最大文字数（暫定。AIが作る文章の長さの上限） */
 export const DESCRIPTION_MAX_LENGTH = 4000;
 
+/** 議事録テキストの最大文字数（暫定。長すぎる入力でAI料金がふくらむのを防ぐ） */
+export const MINUTES_MAX_LENGTH = 8000;
+
+/** 議事録から1回で登録する用語の最大件数（暫定。コストと待ち時間の上限） */
+export const EXTRACT_MAX_TERMS = 12;
+
 export type ValidationResult =
   | { ok: true; value: string }
   | { ok: false; message: string };

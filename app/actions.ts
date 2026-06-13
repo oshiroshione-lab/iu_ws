@@ -7,9 +7,20 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser, logout } from "@/lib/auth";
 import { termRepository } from "@/lib/store";
-import { researchTerm, generateIllustrationBase64 } from "@/lib/ai";
+import {
+  researchTerm,
+  generateIllustrationBase64,
+  extractTermsFromText,
+} from "@/lib/ai";
 import { saveGeneratedImage, deleteGeneratedImage } from "@/lib/images";
-import { validateWord, validateDescription } from "@/lib/validation";
+import {
+  validateWord,
+  validateDescription,
+  MINUTES_MAX_LENGTH,
+  EXTRACT_MAX_TERMS,
+} from "@/lib/validation";
+import { parseTags } from "@/lib/tags";
+import { buildWordIndex } from "@/lib/terms";
 import type { ImageStatus } from "@/lib/types";
 
 /** フォームに返す状態（エラーメッセージを持つ） */
@@ -42,6 +53,7 @@ export async function createTermAction(
     word: check.value,
     description: research.description,
     relatedWords: research.relatedWords,
+    tags: research.tags,
     imageUrl: null,
     imageStatus: "none",
     createdBy: user,
@@ -81,10 +93,14 @@ export async function updateTermAction(
     .filter(Boolean)
     .slice(0, 12);
 
+  // タグはカンマ・読点・改行区切りで入力してもらう
+  const tags = parseTags(String(formData.get("tags") ?? ""));
+
   const updated = await termRepository.update(id, {
     word: wordCheck.value,
     description: descCheck.value,
     relatedWords,
+    tags,
   });
   if (!updated) return { error: "対象の用語が見つかりませんでした" };
 
@@ -119,6 +135,98 @@ export async function retryIllustrationAction(formData: FormData): Promise<void>
   }
   revalidatePath(`/terms/${id}`);
   redirect(`/terms/${id}`);
+}
+
+// ============================================================
+// 議事録（など長文）から専門用語を自動抽出して、まとめて辞書に登録する。
+// 流れ: 貼り付けた文章 → AIが用語候補を抽出 → 1語ずつ説明・関連ワード・タグを作って登録。
+// コスト配慮: 1回で作りすぎないよう件数に上限を設け、イラストはここでは作らない
+//   （重く高くつくため。各用語の詳細ページから後で作れる）。
+//   上限値は lib/validation.ts に置いている（"use server" ファイルは関数しか公開できないため）。
+// ============================================================
+
+export type ExtractState = {
+  error?: string;
+  result?: {
+    /** 新しく登録できた用語 */
+    added: string[];
+    /** すでに辞書にあったので飛ばした用語 */
+    skipped: string[];
+    /** AI処理に失敗した用語 */
+    failed: string[];
+    /** 上限を超えて今回は見送った件数 */
+    overflow: number;
+  };
+};
+
+export async function extractAndCreateTermsAction(
+  _prev: ExtractState,
+  formData: FormData,
+): Promise<ExtractState> {
+  const user = await requireUser();
+
+  const text = String(formData.get("text") ?? "").trim();
+  if (!text) {
+    return { error: "議事録などの文章を貼り付けてください" };
+  }
+  if (text.length > MINUTES_MAX_LENGTH) {
+    return {
+      error: `文章は${MINUTES_MAX_LENGTH}文字以内にしてください（今: ${text.length}文字）。長い場合は分けて貼り付けてください。`,
+    };
+  }
+
+  // 1) 文章から用語候補を抜き出す
+  let candidates: string[];
+  try {
+    candidates = await extractTermsFromText(text);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "AIの処理に失敗しました" };
+  }
+
+  // 2) すでにある用語は飛ばす（重複登録を防ぐ）。
+  //    seen には「既存の用語名」を入れておき、登録するたびに足して、同じ文章内の重複も防ぐ。
+  const seen = new Set(buildWordIndex(await termRepository.list()).keys());
+  const added: string[] = [];
+  const skipped: string[] = [];
+  const failed: string[] = [];
+  let overflow = 0;
+
+  for (const raw of candidates) {
+    const check = validateWord(raw);
+    if (!check.ok) continue;
+    const word = check.value;
+    const key = word.toLowerCase();
+
+    if (seen.has(key)) {
+      skipped.push(word);
+      continue;
+    }
+    if (added.length >= EXTRACT_MAX_TERMS) {
+      overflow += 1;
+      continue;
+    }
+
+    // 3) 1語ずつ説明・関連ワード・タグを作って登録（イラストは作らない）
+    try {
+      const research = await researchTerm(word);
+      await termRepository.create({
+        word,
+        description: research.description,
+        relatedWords: research.relatedWords,
+        tags: research.tags,
+        imageUrl: null,
+        imageStatus: "none",
+        createdBy: user,
+      });
+      seen.add(key);
+      added.push(word);
+    } catch {
+      failed.push(word);
+    }
+  }
+
+  revalidatePath("/");
+  return { result: { added, skipped, failed, overflow } };
 }
 
 /** ログアウト */

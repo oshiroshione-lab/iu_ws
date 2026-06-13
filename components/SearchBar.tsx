@@ -2,22 +2,21 @@
 // ふつうのHTMLフォーム（GET送信）なので、JavaScriptが無くても検索できる。
 // 送信すると /?q=キーワード に移動し、サーバー側で絞り込んだ一覧を表示する。
 
+import { Input } from "@/components/ui/Input";
+import { SearchIcon } from "@/components/ui/icons";
+
 export function SearchBar({ defaultQuery = "" }: { defaultQuery?: string }) {
   return (
-    <form action="/" method="get" className="flex gap-2">
-      <input
-        type="text"
+    <form action="/" method="get" className="relative" role="search">
+      <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        type="search"
         name="q"
         defaultValue={defaultQuery}
-        placeholder="用語を検索…"
-        className="flex-1 rounded-md border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+        placeholder="用語・説明・関連ワード・タグから検索…"
+        aria-label="用語を検索"
+        className="h-11 pl-10 pr-4"
       />
-      <button
-        type="submit"
-        className="rounded-md bg-gray-800 px-4 py-2 text-white hover:bg-gray-700"
-      >
-        検索
-      </button>
     </form>
   );
 }

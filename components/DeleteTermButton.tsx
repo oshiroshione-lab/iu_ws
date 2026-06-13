@@ -3,6 +3,8 @@
 // 削除ボタン（F-07）。押すと確認ダイアログを出し、OKなら削除する。
 
 import { deleteTermAction } from "@/app/actions";
+import { buttonClasses } from "@/components/ui/Button";
+import { TrashIcon } from "@/components/ui/icons";
 
 export function DeleteTermButton({ id, word }: { id: string; word: string }) {
   return (
@@ -17,8 +19,9 @@ export function DeleteTermButton({ id, word }: { id: string; word: string }) {
       <input type="hidden" name="id" value={id} />
       <button
         type="submit"
-        className="rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+        className={buttonClasses({ variant: "destructive", size: "sm" })}
       >
+        <TrashIcon className="h-4 w-4" />
         削除
       </button>
     </form>

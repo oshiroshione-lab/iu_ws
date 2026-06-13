@@ -4,14 +4,18 @@
 // useFormStatus は、囲んでいる <form> の送信状態を教えてくれるフック。
 
 import { useFormStatus } from "react-dom";
+import { buttonClasses, type ButtonVariant } from "@/components/ui/Button";
+import { cn } from "@/lib/cn";
 
 export function SubmitButton({
   idle,
   pending,
+  variant = "primary",
   className,
 }: {
   idle: string;
   pending: string;
+  variant?: ButtonVariant;
   className?: string;
 }) {
   const status = useFormStatus();
@@ -19,12 +23,18 @@ export function SubmitButton({
     <button
       type="submit"
       disabled={status.pending}
-      className={
-        className ??
-        "rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-      }
+      aria-busy={status.pending}
+      className={buttonClasses({ variant, className })}
     >
-      {status.pending ? pending : idle}
+      {status.pending && (
+        <span
+          className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+          aria-hidden="true"
+        />
+      )}
+      <span className={cn(status.pending && "opacity-90")}>
+        {status.pending ? pending : idle}
+      </span>
     </button>
   );
 }

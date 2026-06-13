@@ -12,7 +12,14 @@
 //   ユーザーに知らせる）、イラストは失敗したら null を返す（テキストだけ表示する）。
 
 import OpenAI from "openai";
-import { OPENAI_API_KEY, TEXT_MODEL, IMAGE_MODEL, hasOpenAIKey } from "@/lib/config";
+import {
+  OPENAI_API_KEY,
+  TEXT_MODEL,
+  IMAGE_MODEL,
+  IMAGE_QUALITY,
+  hasOpenAIKey,
+} from "@/lib/config";
+import { normalizeTags } from "@/lib/tags";
 
 /** OpenAIクライアントは1つだけ作って使い回す */
 let client: OpenAI | null = null;
@@ -33,6 +40,8 @@ export interface ResearchResult {
   description: string;
   /** 関連ワード（0件のこともある） */
   relatedWords: string[];
+  /** タグ＝広いカテゴリ（0件のこともある） */
+  tags: string[];
 }
 
 const RESEARCH_SYSTEM_PROMPT = [
@@ -42,8 +51,9 @@ const RESEARCH_SYSTEM_PROMPT = [
   "2) 開発初心者にも分かる、やさしい日本語で書く。難しい言葉を使うときは短い補足を添える。",
   "3) 説明文は事実ベースで、3〜6文程度。だらだら長くしない。",
   "4) 関連ワードは、その用語とセットで覚えると役立つ言葉を最大6個。無理に出さず、無ければ空でよい。",
+  "5) タグは、その用語が属する『広い分野・カテゴリ』を1〜4個（例: AI / 統計 / Web / ネットワーク）。短い名詞にする。無ければ空でよい。",
   "出力は必ず次の形のJSONだけにする（前後に文章をつけない）:",
-  '{ "description": "説明文", "relatedWords": ["語1", "語2"] }',
+  '{ "description": "説明文", "relatedWords": ["語1", "語2"], "tags": ["分野1", "分野2"] }',
 ].join("\n");
 
 /**
@@ -77,11 +87,66 @@ export async function researchTerm(word: string): Promise<ResearchResult> {
         .filter(Boolean)
         .slice(0, 6)
     : [];
+  const tags = Array.isArray(obj.tags)
+    ? normalizeTags(obj.tags.filter((t): t is string => typeof t === "string"))
+    : [];
 
   if (!description) {
     throw new Error("AIが説明文を作れませんでした（もう一度お試しください）。");
   }
-  return { description, relatedWords };
+  return { description, relatedWords, tags };
+}
+
+// イラストの目的は「装飾」ではなく「その用語を“絵で説明する”」こと。
+// そこで、まず安いテキストモデルに『概念を図解で説明する絵の設計（英語）』を書かせ、
+// その設計を画像モデルに渡す（二段構え）。こうすると、ただの雰囲気イラストではなく、
+// 仕組み・構造・流れが伝わる説明的な図になりやすい。
+const ILLUSTRATION_BRIEF_SYSTEM_PROMPT = [
+  "You design ONE clear, educational illustration that visually EXPLAINS a technical term to a beginner.",
+  "You are given the term and its plain-language description. Output a concise English prompt for an image generator.",
+  "The illustration you describe MUST:",
+  "- Explain the concept visually: show its parts, structure, flow, or how it works, like a clean infographic or labeled diagram (but WITHOUT any written labels).",
+  "- Use simple visual devices (boxes, arrows, icons, before/after, input→process→output) to make relationships and process obvious.",
+  "- Be a single, uncluttered scene that a beginner can understand at a glance.",
+  "- Contain NO text, letters, numbers, or written labels of any kind (image models render text incorrectly; rely on visuals only).",
+  "Output ONLY the English image prompt itself. No preamble, no quotes.",
+].join("\n");
+
+// 画像モデルに必ず付ける、見た目と『文字なし』を強制するスタイル指定。
+const ILLUSTRATION_STYLE_SUFFIX =
+  "Style: clean flat vector educational infographic, simple bold shapes, soft modern color palette, generous white space, high clarity, centered composition. Absolutely no text, no letters, no numbers, no captions anywhere in the image.";
+
+/**
+ * 用語を「絵で説明する」ための、画像生成プロンプト（英語）を作る。
+ * 失敗しても止まらないよう、その場合は説明文を使ったシンプルな代替プロンプトを返す。
+ */
+async function buildIllustrationPrompt(
+  word: string,
+  description: string,
+): Promise<string> {
+  try {
+    const completion = await getClient().chat.completions.create({
+      model: TEXT_MODEL,
+      messages: [
+        { role: "system", content: ILLUSTRATION_BRIEF_SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: `Term: ${word}\nDescription (Japanese): ${description.slice(0, 500)}`,
+        },
+      ],
+    });
+    const brief = completion.choices[0]?.message?.content?.trim();
+    if (brief) return `${brief} ${ILLUSTRATION_STYLE_SUFFIX}`;
+  } catch (err) {
+    console.error("[ai] イラスト設計の作成に失敗（代替プロンプトを使用）:", err);
+  }
+  // 代替：説明文をそのまま手がかりにして、説明的な図を描かせる
+  return [
+    `An educational diagram that visually explains the concept of "${word}".`,
+    "Depict its structure or how it works using boxes, arrows and simple icons so a beginner understands it at a glance.",
+    `Concept summary: ${description.slice(0, 300)}`,
+    ILLUSTRATION_STYLE_SUFFIX,
+  ].join(" ");
 }
 
 /**
@@ -94,16 +159,13 @@ export async function generateIllustrationBase64(
 ): Promise<string | null> {
   if (!hasOpenAIKey) return null;
   try {
-    const prompt = [
-      `「${word}」をイメージできる、わかりやすいイラスト。`,
-      "文字や数式は入れない。やわらかく親しみやすい雰囲気。",
-      `参考の説明: ${description.slice(0, 300)}`,
-    ].join(" ");
+    const prompt = await buildIllustrationPrompt(word, description);
 
     const result = await getClient().images.generate({
       model: IMAGE_MODEL,
       prompt,
       size: "1024x1024",
+      quality: IMAGE_QUALITY, // 既定は medium（config の IMAGE_QUALITY で変更可）
     });
 
     const first = result.data?.[0];
