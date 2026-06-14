@@ -102,19 +102,17 @@ export async function researchTerm(word: string): Promise<ResearchResult> {
 // その設計を画像モデルに渡す（二段構え）。こうすると、ただの雰囲気イラストではなく、
 // 仕組み・構造・流れが伝わる説明的な図になりやすい。
 const ILLUSTRATION_BRIEF_SYSTEM_PROMPT = [
-  "You design ONE clear, educational illustration that visually EXPLAINS a technical term to a beginner.",
-  "You are given the term and its plain-language description. Output a concise English prompt for an image generator.",
-  "The illustration you describe MUST:",
-  "- Explain the concept visually: show its parts, structure, flow, or how it works, like a clean infographic or labeled diagram (but WITHOUT any written labels).",
-  "- Use simple visual devices (boxes, arrows, icons, before/after, input→process→output) to make relationships and process obvious.",
-  "- Be a single, uncluttered scene that a beginner can understand at a glance.",
-  "- Contain NO text, letters, numbers, or written labels of any kind (image models render text incorrectly; rely on visuals only).",
-  "Output ONLY the English image prompt itself. No preamble, no quotes.",
+  "You write an image-generation prompt for ONE clear EDUCATIONAL DIAGRAM that explains a technical term to a beginner.",
+  "Think like an instructional designer. Given the term and its plain-language Japanese description, output a single English prompt that renders a flat-vector, infographic-style diagram.",
+  "Order the prompt as: (1) format and style, (2) the main concept/subject, (3) the key parts and how they relate — use boxes, arrows, icons, and patterns like input → process → output, before/after, or part-to-whole, (4) constraints.",
+  "Labels: you MAY add a few SHORT labels to name the key parts. Write each label as a short Japanese word or phrase (1-3 words) inside double quotes. Use at most 4 labels. Prefer clear icons over text, and never put sentences or paragraphs inside the image.",
+  "Make the relationships obvious so a beginner understands the concept at a glance. Keep it a single, uncluttered scene.",
+  "Output ONLY the English image prompt. No preamble.",
 ].join("\n");
 
-// 画像モデルに必ず付ける、見た目と『文字なし』を強制するスタイル指定。
+// 画像モデルに必ず付けるスタイル指定。図解として読みやすく、ラベルは“短く少なく”に抑える。
 const ILLUSTRATION_STYLE_SUFFIX =
-  "Style: clean flat vector educational infographic, simple bold shapes, soft modern color palette, generous white space, high clarity, centered composition. Absolutely no text, no letters, no numbers, no captions anywhere in the image.";
+  "Style: clean flat vector educational infographic, bold simple shapes, clear arrows and icons, soft modern color palette, generous white space, high readability, balanced centered composition. Use only a few short labels — no sentences, no paragraphs, no watermark or signature.";
 
 /**
  * 用語を「絵で説明する」ための、画像生成プロンプト（英語）を作る。
@@ -140,11 +138,11 @@ async function buildIllustrationPrompt(
   } catch (err) {
     console.error("[ai] イラスト設計の作成に失敗（代替プロンプトを使用）:", err);
   }
-  // 代替：説明文をそのまま手がかりにして、説明的な図を描かせる
+  // 代替：説明文をそのまま手がかりにして、ラベル付きの説明図を描かせる
   return [
-    `An educational diagram that visually explains the concept of "${word}".`,
-    "Depict its structure or how it works using boxes, arrows and simple icons so a beginner understands it at a glance.",
-    `Concept summary: ${description.slice(0, 300)}`,
+    `An educational infographic-style diagram that explains the concept of "${word}" to a beginner.`,
+    "Show its key parts and how they relate using labeled boxes, arrows and simple icons (for example input to process to output).",
+    `You may add up to 4 very short Japanese labels in double quotes to name the parts. Concept summary: ${description.slice(0, 300)}`,
     ILLUSTRATION_STYLE_SUFFIX,
   ].join(" ");
 }
