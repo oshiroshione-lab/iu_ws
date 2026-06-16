@@ -3,12 +3,15 @@
 import Link from "next/link";
 import type { Term } from "@/lib/types";
 import { cn } from "@/lib/cn";
+import { isRecentlyAdded } from "@/lib/terms";
 import { Badge } from "@/components/ui/Badge";
+import { CheckCircleIcon } from "@/components/ui/icons";
 
 export function TermCard({ term }: { term: Term }) {
   const date = term.createdAt
     ? new Date(term.createdAt).toLocaleDateString("ja-JP")
     : "";
+  const isNew = isRecentlyAdded(term.createdAt, Date.now());
 
   return (
     <Link
@@ -34,11 +37,27 @@ export function TermCard({ term }: { term: Term }) {
             </span>
           </div>
         )}
+        {!term.imageUrl && term.imageStatus === "generating" && (
+          <span className="absolute bottom-1.5 right-1.5 rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-medium text-primary shadow-sm backdrop-blur">
+            イラスト生成中…
+          </span>
+        )}
+        {isNew && (
+          <span className="absolute left-1.5 top-1.5 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold tracking-wide text-primary-foreground shadow-sm">
+            NEW
+          </span>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <h3 className="font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
-          {term.word}
+        <h3 className="flex items-center gap-1.5 font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
+          <span className="truncate">{term.word}</span>
+          {term.verifiedBy && (
+            <CheckCircleIcon
+              className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+              aria-label="確認済み"
+            />
+          )}
         </h3>
         <p className="line-clamp-2 flex-1 text-sm leading-relaxed text-muted-foreground">
           {term.description}

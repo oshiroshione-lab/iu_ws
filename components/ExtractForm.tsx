@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/Badge";
 import { SubmitButton } from "./SubmitButton";
 import { SparklesIcon } from "@/components/ui/icons";
 
-export function ExtractForm() {
+export function ExtractForm({ defaultText = "" }: { defaultText?: string }) {
   const [state, formAction] = useActionState<ExtractState, FormData>(
     extractAndCreateTermsAction,
     {},
@@ -34,6 +34,7 @@ export function ExtractForm() {
             <Textarea
               name="text"
               rows={10}
+              defaultValue={defaultText}
               maxLength={MINUTES_MAX_LENGTH}
               placeholder="会議の文字起こしやメモを貼り付けてください。AIが専門用語を見つけて、1つずつ説明・関連ワード・タグを作って登録します。"
             />

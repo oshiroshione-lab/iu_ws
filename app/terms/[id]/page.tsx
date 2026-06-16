@@ -6,11 +6,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { termRepository } from "@/lib/store";
-import { buildWordIndex, findBacklinks } from "@/lib/terms";
-import { retryIllustrationAction } from "@/app/actions";
+import {
+  buildWordIndex,
+  findBacklinks,
+  linkifyText,
+  findRelatedBySharedWords,
+} from "@/lib/terms";
+import type { Term } from "@/lib/types";
+import {
+  retryIllustrationAction,
+  verifyTermAction,
+  unverifyTermAction,
+  toggleLikeAction,
+  deleteCommentAction,
+} from "@/app/actions";
 import { cn } from "@/lib/cn";
 import { DeleteTermButton } from "@/components/DeleteTermButton";
 import { SubmitButton } from "@/components/SubmitButton";
+import { CommentForm } from "@/components/CommentForm";
 import { Badge } from "@/components/ui/Badge";
 import { buttonClasses } from "@/components/ui/Button";
 import {
@@ -19,6 +32,9 @@ import {
   PlusIcon,
   LinkIcon,
   ImageIcon,
+  CheckCircleIcon,
+  HeartIcon,
+  MessageIcon,
 } from "@/components/ui/icons";
 
 export default async function TermDetailPage({
@@ -26,7 +42,7 @@ export default async function TermDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await params;
 
   // 全件を1回だけ取り、相互リンク（早引き表）と被リンクを計算する。
@@ -36,9 +52,31 @@ export default async function TermDetailPage({
 
   const index = buildWordIndex(all);
   const backlinks = findBacklinks(all, term.word);
+
+  // 説明文の中に出てくる登録済みの用語をリンクにする（Scrapbox 式の自動リンク）。
+  const descriptionSegments = linkifyText(term.description, all, term.id);
+
+  // 2-hop：同じ関連ワードでゆるくつながる“兄弟”の用語。
+  // すでに「関連ワード」「この用語とつながる用語」で見せている用語は除いて重複を避ける。
+  const directLinkedIds = new Set(
+    term.relatedWords
+      .map((w) => index.get(w.trim().toLowerCase()))
+      .filter((t): t is Term => !!t && t.id !== term.id)
+      .map((t) => t.id),
+  );
+  const excludeIds = new Set<string>([
+    ...directLinkedIds,
+    ...backlinks.map((b) => b.id),
+  ]);
+  const sharedRelated = findRelatedBySharedWords(all, term, excludeIds);
+
   const created = term.createdAt
     ? new Date(term.createdAt).toLocaleString("ja-JP")
     : "";
+  const verifiedDate = term.verifiedAt
+    ? new Date(term.verifiedAt).toLocaleDateString("ja-JP")
+    : "";
+  const liked = term.likedBy.includes(user);
 
   // ヒーローの“リード文”は説明文の最初の1文だけ使う（残りは下の説明セクションで全文表示）。
   const lead = term.description.split("。")[0]?.trim();
@@ -46,7 +84,7 @@ export default async function TermDetailPage({
 
   return (
     <article className="mx-auto flex max-w-4xl animate-fade-in flex-col gap-12">
-      <div>
+      <div className="flex items-center justify-between gap-2">
         <Link
           href="/"
           className={cn(
@@ -56,6 +94,13 @@ export default async function TermDetailPage({
         >
           <ArrowLeftIcon className="h-4 w-4" />
           一覧へ戻る
+        </Link>
+        <Link
+          href={`/terms/${term.id}/edit`}
+          className={buttonClasses({ variant: "outline", size: "sm" })}
+        >
+          <PencilIcon className="h-4 w-4" />
+          編集
         </Link>
       </div>
 
@@ -87,7 +132,7 @@ export default async function TermDetailPage({
             )}
           </div>
 
-          {/* イラスト（無ければプレースホルダー＋作り直し） */}
+          {/* イラスト（無ければ：生成中の表示 / プレースホルダー＋作り直し） */}
           <div className="flex justify-center">
             {term.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -96,6 +141,16 @@ export default async function TermDetailPage({
                 alt={`${term.word}を説明するイラスト`}
                 className="max-h-80 w-full rounded-xl border bg-card object-contain shadow-sm"
               />
+            ) : term.imageStatus === "generating" ? (
+              <div className="flex w-full flex-col items-center gap-3 rounded-xl border border-dashed bg-card/60 p-8 text-center">
+                <ImageIcon className="h-8 w-8 animate-shimmer text-primary" />
+                <p className="text-sm font-medium text-primary">
+                  イラストを生成中です…
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  そのまま一覧に戻れます。できあがったら画面でお知らせします。
+                </p>
+              </div>
             ) : (
               <div className="flex w-full flex-col items-center gap-3 rounded-xl border border-dashed bg-card/60 p-8 text-center">
                 <ImageIcon className="h-8 w-8 text-muted-foreground" />
@@ -124,8 +179,62 @@ export default async function TermDetailPage({
           <h2 className="text-xl font-bold tracking-tight">説明</h2>
           <Badge variant="outline">比喩を使わない説明</Badge>
         </div>
+
+        {/* 確認状態（AI生成の説明の正しさを、人が読んで担保する印） */}
+        {term.verifiedBy ? (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm">
+            <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
+              <CheckCircleIcon className="h-4 w-4" />
+              確認済み
+            </span>
+            <span className="text-muted-foreground">
+              {term.verifiedBy}
+              {verifiedDate && ` ・ ${verifiedDate} に確認`}
+            </span>
+            <form action={unverifyTermAction} className="ml-auto">
+              <input type="hidden" name="id" value={term.id} />
+              <button
+                type="submit"
+                className="text-xs text-muted-foreground hover:text-destructive hover:underline"
+              >
+                確認を取り消す
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm">
+            <span className="font-medium text-amber-700 dark:text-amber-500">
+              AI生成・未確認
+            </span>
+            <span className="text-muted-foreground">
+              内容が正しいか、読んだ人が確認しましょう。
+            </span>
+            <form action={verifyTermAction} className="ml-auto">
+              <input type="hidden" name="id" value={term.id} />
+              <SubmitButton
+                idle="内容を確認した"
+                pending="保存中…"
+                variant="outline"
+              />
+            </form>
+          </div>
+        )}
+
         <p className="whitespace-pre-wrap text-base leading-8 text-foreground/90">
-          {term.description}
+          {descriptionSegments.map((seg, i) =>
+            seg.termId ? (
+              <Link
+                key={i}
+                href={`/terms/${seg.termId}`}
+                title="登録済みの用語を開く"
+                className="text-primary underline decoration-dotted underline-offset-2 transition-colors hover:decoration-solid"
+              >
+                {seg.text}
+              </Link>
+            ) : (
+              <span key={i}>{seg.text}</span>
+            ),
+          )}
         </p>
       </section>
 
@@ -190,6 +299,102 @@ export default async function TermDetailPage({
           </ul>
         </section>
       )}
+
+      {/* ===== 2-hop（同じ関連ワードでつながる“兄弟”の用語） ===== */}
+      {sharedRelated.length > 0 && (
+        <section className="flex flex-col gap-4">
+          <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight">
+            <LinkIcon className="h-5 w-5 text-muted-foreground" />
+            同じ関連ワードでつながる用語
+          </h2>
+          <ul className="flex flex-wrap gap-2">
+            {sharedRelated.slice(0, 8).map(({ term: b, shared }) => (
+              <li key={b.id}>
+                <Link
+                  href={`/terms/${b.id}`}
+                  title={`共通の関連ワード: ${shared.join("、")}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  {b.word}
+                  <span className="text-xs text-muted-foreground">
+                    {shared[0]}
+                    {shared.length > 1 && ` +${shared.length - 1}`}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* ===== コメント・いいね（みんなで説明を育てる） ===== */}
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight">
+            <MessageIcon className="h-5 w-5 text-muted-foreground" />
+            コメント
+            {term.comments.length > 0 && (
+              <span className="text-base font-normal text-muted-foreground">
+                {term.comments.length}
+              </span>
+            )}
+          </h2>
+          <form action={toggleLikeAction}>
+            <input type="hidden" name="id" value={term.id} />
+            <button
+              type="submit"
+              className={cn(
+                buttonClasses({ variant: "outline", size: "sm" }),
+                liked && "border-rose-400 text-rose-600 dark:text-rose-400",
+              )}
+              aria-pressed={liked}
+            >
+              <HeartIcon className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
+              {liked ? "いいね済み" : "いいね"}
+              {term.likedBy.length > 0 && (
+                <span className="font-semibold">{term.likedBy.length}</span>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {term.comments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            まだコメントはありません。説明への補足や直したい点があれば書いてください。
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {term.comments.map((c) => {
+              const at = c.at ? new Date(c.at).toLocaleString("ja-JP") : "";
+              return (
+                <li key={c.id} className="rounded-lg border bg-card p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">{c.by}</span>
+                    <span className="text-xs text-muted-foreground">{at}</span>
+                  </div>
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+                    {c.text}
+                  </p>
+                  {c.by === user && (
+                    <form action={deleteCommentAction} className="mt-1.5">
+                      <input type="hidden" name="id" value={term.id} />
+                      <input type="hidden" name="commentId" value={c.id} />
+                      <button
+                        type="submit"
+                        className="text-xs text-muted-foreground hover:text-destructive hover:underline"
+                      >
+                        削除
+                      </button>
+                    </form>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <CommentForm termId={term.id} />
+      </section>
 
       {/* ===== 管理（F-07） ===== */}
       <div className="flex gap-3 border-t pt-6">

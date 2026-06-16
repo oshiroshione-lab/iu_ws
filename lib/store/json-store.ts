@@ -11,8 +11,25 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { Term, NewTermData, TermPatch } from "@/lib/types";
+import type { Term, NewTermData, TermPatch, TermComment } from "@/lib/types";
+import { normalizeForSearch } from "@/lib/terms";
 import type { TermRepository } from "./repository";
+
+/** 保存ファイルのコメント配列を、いまの TermComment[] の形に整える。 */
+function normalizeComments(raw: unknown): TermComment[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((c) => {
+      const o = (c ?? {}) as Record<string, unknown>;
+      return {
+        id: String(o.id ?? ""),
+        by: String(o.by ?? ""),
+        text: String(o.text ?? ""),
+        at: String(o.at ?? ""),
+      };
+    })
+    .filter((c) => c.text.length > 0);
+}
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DATA_FILE = path.join(DATA_DIR, "terms.json");
@@ -36,7 +53,17 @@ function normalizeTerm(raw: unknown): Term {
       : [],
     imageUrl: typeof t.imageUrl === "string" ? t.imageUrl : null,
     imageStatus:
-      t.imageStatus === "ok" || t.imageStatus === "failed" ? t.imageStatus : "none",
+      t.imageStatus === "ok" ||
+      t.imageStatus === "failed" ||
+      t.imageStatus === "generating"
+        ? t.imageStatus
+        : "none",
+    verifiedBy: typeof t.verifiedBy === "string" ? t.verifiedBy : null,
+    verifiedAt: typeof t.verifiedAt === "string" ? t.verifiedAt : null,
+    likedBy: Array.isArray(t.likedBy)
+      ? (t.likedBy.filter((u) => typeof u === "string") as string[])
+      : [],
+    comments: normalizeComments(t.comments),
     createdBy: String(t.createdBy ?? ""),
     createdAt: String(t.createdAt ?? ""),
     updatedAt: String(t.updatedAt ?? ""),
@@ -70,14 +97,13 @@ export class JsonTermRepository implements TermRepository {
   }
 
   async search(query: string): Promise<Term[]> {
-    const q = query.trim().toLowerCase();
+    const q = normalizeForSearch(query);
     if (q === "") return this.list();
     const all = await readAll();
+    // 用語名・説明・関連ワード・タグのどれかが、表記ゆれを吸収したうえで一致すればヒット。
     const hit = all.filter((t) => {
-      const haystack = [t.word, t.description, ...t.relatedWords, ...t.tags]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
+      const fields = [t.word, t.description, ...t.relatedWords, ...t.tags];
+      return fields.some((f) => normalizeForSearch(f).includes(q));
     });
     return sortNewest(hit);
   }
@@ -98,6 +124,10 @@ export class JsonTermRepository implements TermRepository {
       tags: data.tags,
       imageUrl: data.imageUrl,
       imageStatus: data.imageStatus,
+      verifiedBy: null, // 新規はまず「未確認」。あとで誰かが確認する。
+      verifiedAt: null,
+      likedBy: [],
+      comments: [],
       createdBy: data.createdBy,
       createdAt: now,
       updatedAt: now,

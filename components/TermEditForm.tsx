@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { updateTermAction, type FormState } from "@/app/actions";
 import { SubmitButton } from "./SubmitButton";
+import { TagPicker } from "@/components/TagPicker";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -32,18 +33,13 @@ export function TermEditForm({ term }: { term: Term }) {
           <Textarea name="description" defaultValue={term.description} rows={8} />
         </label>
 
-        <label className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">タグ</span>
-          <Input
-            type="text"
-            name="tags"
-            defaultValue={term.tags.join(", ")}
-            placeholder="例：AI, 統計, Web（カンマ区切り）"
-          />
+          <TagPicker defaultValue={term.tags} />
           <span className="text-xs text-muted-foreground">
-            カンマや読点で区切って入力します（最大6個）。
+            当てはまる分野を1つだけ選んでください（もう一度押すと外せます）。
           </span>
-        </label>
+        </div>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">関連ワード（1行に1つ）</span>

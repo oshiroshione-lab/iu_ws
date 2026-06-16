@@ -38,7 +38,10 @@ export default async function HomePage({
         </p>
       </header>
 
-      <SearchBar defaultQuery={query} />
+      <SearchBar
+        defaultQuery={query}
+        terms={all.map((t) => ({ id: t.id, word: t.word, tags: t.tags }))}
+      />
 
       <TagFilter tags={tags} activeTag={activeTag || undefined} />
 

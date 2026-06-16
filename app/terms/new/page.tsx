@@ -5,6 +5,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { hasOpenAIKey } from "@/lib/config";
 import { cn } from "@/lib/cn";
+import { termRepository } from "@/lib/store";
 import { TermRegisterForm } from "@/components/TermRegisterForm";
 import { buttonClasses } from "@/components/ui/Button";
 import { ArrowLeftIcon } from "@/components/ui/icons";
@@ -16,6 +17,11 @@ export default async function NewTermPage({
 }) {
   await requireUser();
   const { word } = await searchParams;
+  // 重複防止サジェスト用に、登録済みの用語名を渡す
+  const existingTerms = (await termRepository.list()).map((t) => ({
+    id: t.id,
+    word: t.word,
+  }));
 
   return (
     <div className="mx-auto flex max-w-xl animate-fade-in flex-col gap-6">
@@ -40,7 +46,7 @@ export default async function NewTermPage({
         </p>
       )}
 
-      <TermRegisterForm defaultWord={word ?? ""} />
+      <TermRegisterForm defaultWord={word ?? ""} existingTerms={existingTerms} />
     </div>
   );
 }

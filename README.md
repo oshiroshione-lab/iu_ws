@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# iUナレッジWS — 私たちの辞書
 
-## Getting Started
+iU のインターン3人チームが、新しく学んだ専門用語を共有・保存するための Web アプリです。
+用語名を入力すると、AI が自動でリサーチして、**比喩表現（たとえ話）を使わない**わかりやすい説明文・
+イメージイラスト・関連ワードを生成します。
 
-First, run the development server:
+> 詳しい仕様は **[`iUナレッジWS_要件定義書.md`](./iUナレッジWS_要件定義書.md)**（唯一の正式な仕様書）を見てください。
+> これまでの開発の歩みは **[`JOURNEY.md`](./JOURNEY.md)** に、やさしい言葉でまとめています。
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## いまの状態（だいじ）
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+これは**まだ自分のPCの中だけで動く試作品**です。3人で共有して使うには、もう少し作業が要ります。
+何が足りなくて、どう進めれば「みんなで使えるソフト」になるかは
+**[`docs/みんなで使うまでの最短手順.md`](./docs/みんなで使うまでの最短手順.md)** にまとめました。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- データの保存先（データベース）：**未確定**。当面はPC内のファイル（`.data/terms.json`）に保存。
+- ログイン（認証）：**未確定**。当面は「名前＋合言葉」だけの簡易版。
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 使っている技術
 
-## Learn More
+- TypeScript / Next.js 16（App Router）
+- AI：OpenAI（テキスト＝`gpt-5.4-nano` ／ 画像＝`gpt-image-2`）
+- ホスティング（公開する場所）：Vercel を想定
 
-To learn more about Next.js, take a look at the following resources:
+## 動かし方（自分のPCで試す）
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. 必要な設定ファイルを用意します。`.env.local.example` をコピーして `.env.local` を作り、
+   OpenAI の API キーなどを書きます（このファイルは秘密情報なので Git に上げません）。
+2. 部品をインストールします。
+   ```bash
+   npm install
+   ```
+3. 開発サーバーを起動します。
+   ```bash
+   npm run dev
+   ```
+4. ブラウザで http://localhost:3000 を開きます。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+> OpenAI のキーを入れていなくても画面は動きますが、AI の説明・イラスト生成はスキップされ、案内が出ます。
 
-## Deploy on Vercel
+## よく使うコマンド
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| やりたいこと | コマンド |
+|---|---|
+| 開発サーバーを起動する | `npm run dev` |
+| 本番ビルドを確認する | `npm run build` |
+| テストを実行する | `npm test` |
+| 型チェックする | `npm run typecheck` |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## どこに何があるか
+
+| 場所 | 役割 |
+|---|---|
+| `app/` | 画面（一覧・登録・詳細・編集・ログイン・議事録から登録） |
+| `components/` | 画面の部品（カード・ボタン・入力欄など） |
+| `lib/ai.ts` | AI 呼び出しの集約。**説明文に比喩を使わない**指示はここ |
+| `lib/config.ts` | モデル名・画質などの既定値（`.env.local` で上書き可） |
+| `lib/store/` | データの保存先。DB が決まったらここを差し替える |
+| `lib/auth.ts` | ログイン（仮実装）。本認証が決まったらここを差し替える |
+| `lib/pricing.ts` | API 料金の目安を計算（画面右上のコインのボタンで表示） |
+| `docs/` | ドキュメント。`docs/research/` には調べものを保存 |
+| `tests/` | テスト（`npm test` で実行） |
+
+## エージェント（Claude など）向けの約束ごと
+
+開発の進め方・差し替えポイント・守るべき前提は **[`AGENTS.md`](./AGENTS.md)** に集約しています。

@@ -5,9 +5,17 @@ import "./globals.css";
 import { cn } from "@/lib/cn";
 import { getCurrentUser } from "@/lib/auth";
 import { logoutAction } from "@/app/actions";
+import { computePricingSummary } from "@/lib/pricing";
 import { buttonClasses } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { BookIcon, PlusIcon, FileTextIcon } from "@/components/ui/icons";
+import { CostMenu } from "@/components/CostMenu";
+import { IllustrationNotifier } from "@/components/IllustrationNotifier";
+import {
+  BookIcon,
+  PlusIcon,
+  FileTextIcon,
+  HelpCircleIcon,
+} from "@/components/ui/icons";
 
 export const metadata: Metadata = {
   title: "私たちの辞書 — iUナレッジWS",
@@ -42,14 +50,24 @@ export default async function RootLayout({
               {user ? (
                 <>
                   <Link
-                    href="/terms/extract"
+                    href="/requests"
+                    className={cn(
+                      buttonClasses({ variant: "ghost", size: "sm" }),
+                      "hidden text-muted-foreground sm:inline-flex",
+                    )}
+                  >
+                    <HelpCircleIcon className="h-4 w-4" />
+                    リクエスト
+                  </Link>
+                  <Link
+                    href="/minutes"
                     className={cn(
                       buttonClasses({ variant: "ghost", size: "sm" }),
                       "hidden text-muted-foreground sm:inline-flex",
                     )}
                   >
                     <FileTextIcon className="h-4 w-4" />
-                    議事録から登録
+                    議事録
                   </Link>
                   <Link
                     href="/terms/new"
@@ -58,6 +76,7 @@ export default async function RootLayout({
                     <PlusIcon className="h-4 w-4" />
                     用語を登録
                   </Link>
+                  <CostMenu summary={computePricingSummary()} />
                   <ThemeToggle />
                   <span className="hidden items-center gap-1.5 px-2 text-sm text-muted-foreground md:inline-flex">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-xs font-medium text-secondary-foreground">
@@ -88,6 +107,9 @@ export default async function RootLayout({
         <footer className="border-t py-5 text-center text-xs text-muted-foreground">
           iUナレッジWS — チーム3人の辞書
         </footer>
+
+        {/* ログイン中だけ、裏で作っているイラストの完成を通知する */}
+        {user && <IllustrationNotifier />}
       </body>
     </html>
   );

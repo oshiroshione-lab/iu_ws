@@ -50,3 +50,5 @@ next-env.d.ts
 # 使い捨てスクリプト・実験・一時メモの隔離場所（フォルダだけは残す）
 /scratch/*
 !/scratch/.gitkeep
+# Windows のスクリーンショット（共有しない）
+スクリーンショット*.png

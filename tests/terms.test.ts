@@ -6,6 +6,10 @@ import {
   filterByTag,
   buildWordIndex,
   findBacklinks,
+  linkifyText,
+  findRelatedBySharedWords,
+  isRecentlyAdded,
+  normalizeForSearch,
 } from "@/lib/terms";
 import type { Term } from "@/lib/types";
 
@@ -19,6 +23,10 @@ function makeTerm(partial: Partial<Term> & { word: string }): Term {
     tags: partial.tags ?? [],
     imageUrl: partial.imageUrl ?? null,
     imageStatus: partial.imageStatus ?? "none",
+    verifiedBy: partial.verifiedBy ?? null,
+    verifiedAt: partial.verifiedAt ?? null,
+    likedBy: partial.likedBy ?? [],
+    comments: partial.comments ?? [],
     createdBy: partial.createdBy ?? "テスト",
     createdAt: partial.createdAt ?? "2026-06-13T00:00:00.000Z",
     updatedAt: partial.updatedAt ?? "2026-06-13T00:00:00.000Z",
@@ -66,5 +74,94 @@ describe("findBacklinks（この用語を関連ワードに挙げている用語
 
   it("だれからも参照されていなければ空", () => {
     expect(findBacklinks(terms, "正規分布")).toEqual([]);
+  });
+});
+
+describe("linkifyText（説明文の中の用語名を自動リンク）", () => {
+  it("登録済みの用語をリンク片に分け、それ以外は文字のまま返す", () => {
+    const segs = linkifyText("機械学習はニューラルネットと関係が深い。", terms);
+    // 用語の所だけ termId が付く
+    const linked = segs.filter((s) => s.termId);
+    expect(linked.map((s) => s.text)).toEqual(["機械学習", "ニューラルネット"]);
+    // つなぎ直すと元の文章に戻る（欠落や重複がない）
+    expect(segs.map((s) => s.text).join("")).toBe(
+      "機械学習はニューラルネットと関係が深い。",
+    );
+  });
+
+  it("長い用語を優先する（「機械学習」を「学習」より先に当てる）", () => {
+    const ts = [
+      makeTerm({ id: "ml", word: "機械学習" }),
+      makeTerm({ id: "study", word: "学習" }),
+    ];
+    const segs = linkifyText("機械学習の話", ts);
+    const linked = segs.filter((s) => s.termId);
+    expect(linked).toEqual([{ text: "機械学習", termId: "ml" }]);
+  });
+
+  it("同じ用語が何度出てもリンクは最初の1回だけ", () => {
+    const ts = [makeTerm({ id: "api", word: "API" })];
+    const segs = linkifyText("APIとAPIをつなぐAPI", ts);
+    expect(segs.filter((s) => s.termId)).toHaveLength(1);
+  });
+
+  it("excludeId に渡した用語（自分自身）はリンクにしない", () => {
+    const segs = linkifyText("機械学習の説明", terms, "機械学習");
+    expect(segs.some((s) => s.termId)).toBe(false);
+  });
+});
+
+describe("findRelatedBySharedWords（同じ関連ワードでつながる用語）", () => {
+  const ts = [
+    makeTerm({ id: "react", word: "React", relatedWords: ["仮想DOM", "JSX"] }),
+    makeTerm({ id: "vue", word: "Vue", relatedWords: ["仮想DOM", "SPA"] }),
+    makeTerm({ id: "stat", word: "正規分布", relatedWords: ["平均"] }),
+  ];
+
+  it("共通の関連ワードを持つ用語を、共通語つきで返す", () => {
+    const react = ts[0];
+    const result = findRelatedBySharedWords(ts, react);
+    expect(result.map((r) => r.term.word)).toEqual(["Vue"]);
+    expect(result[0].shared).toEqual(["仮想DOM"]);
+  });
+
+  it("excludeIds に入れた用語は除く", () => {
+    const react = ts[0];
+    const result = findRelatedBySharedWords(ts, react, new Set(["vue"]));
+    expect(result).toEqual([]);
+  });
+});
+
+describe("isRecentlyAdded（新着判定）", () => {
+  const now = Date.parse("2026-06-16T12:00:00.000Z");
+
+  it("既定（3日以内）なら新着", () => {
+    expect(isRecentlyAdded("2026-06-15T12:00:00.000Z", now)).toBe(true);
+  });
+
+  it("3日より前なら新着ではない", () => {
+    expect(isRecentlyAdded("2026-06-10T12:00:00.000Z", now)).toBe(false);
+  });
+
+  it("未来日時は新着扱いしない", () => {
+    expect(isRecentlyAdded("2026-06-20T12:00:00.000Z", now)).toBe(false);
+  });
+
+  it("日付として読めない文字列は false", () => {
+    expect(isRecentlyAdded("", now)).toBe(false);
+  });
+});
+
+describe("normalizeForSearch（検索の表記ゆれ吸収）", () => {
+  it("カタカナとひらがなを同じにする", () => {
+    expect(normalizeForSearch("パス")).toBe(normalizeForSearch("ぱす"));
+  });
+
+  it("全角英数字を半角・小文字にする", () => {
+    expect(normalizeForSearch("ＰＡＴＨ")).toBe("path");
+  });
+
+  it("英字の大文字小文字をそろえ、空白を取り除く", () => {
+    expect(normalizeForSearch("A P I")).toBe("api");
   });
 });

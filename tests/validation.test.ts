@@ -2,7 +2,7 @@
 // 新しい確認を書いたら、使い捨てにせずこの tests/ フォルダに足していく。
 
 import { describe, it, expect } from "vitest";
-import { validateWord, WORD_MAX_LENGTH } from "@/lib/validation";
+import { validateWord, WORD_MAX_LENGTH, clipText } from "@/lib/validation";
 
 describe("validateWord（用語名のチェック）", () => {
   it("ふつうの用語名は受け入れる", () => {
@@ -25,5 +25,15 @@ describe("validateWord（用語名のチェック）", () => {
   it("長すぎる用語名はエラーにする", () => {
     const tooLong = "あ".repeat(WORD_MAX_LENGTH + 1);
     expect(validateWord(tooLong).ok).toBe(false);
+  });
+});
+
+describe("clipText（自由記述欄の整え）", () => {
+  it("前後の空白を取り除く", () => {
+    expect(clipText("  太郎、花子  ", 100)).toBe("太郎、花子");
+  });
+
+  it("上限文字数で切る", () => {
+    expect(clipText("あいうえお", 3)).toBe("あいう");
   });
 });

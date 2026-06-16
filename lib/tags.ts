@@ -1,7 +1,36 @@
 // タグの整え方（バリデーション）を1か所にまとめる。
 //
-// ・parseTags: 入力文字列（カンマ・読点・改行区切り）をタグの配列にする
-// ・normalizeTags: 前後の空白を取り、重複（大文字小文字の違いも）を消し、上限までに絞る
+// タグは「AIが自由に作る」のをやめ、決まった最小限の選択肢（TAG_OPTIONS）から
+// 選んでもらう方式にした。表記ゆれや増えすぎを防ぎ、絞り込みが安定する。
+//
+// ・TAG_OPTIONS: 選べるタグの固定リスト（ここを増減すれば全体に反映される）
+// ・sanitizeTags: 受け取ったタグを、固定リストにあるものだけに整える（順序も統一）
+// ・normalizeTags / parseTags: 旧・自由入力用の整え方（後方互換のため残す）
+
+/** 選べるタグの固定リスト（最小限）。ここを編集すれば選択肢が変わる。 */
+export const TAG_OPTIONS = [
+  "AI",
+  "Web",
+  "データベース",
+  "ネットワーク",
+  "セキュリティ",
+  "インフラ・クラウド",
+  "開発・設計",
+  "その他",
+] as const;
+
+export type TagOption = (typeof TAG_OPTIONS)[number];
+
+/**
+ * 受け取ったタグを「固定リストにあるものだけ」に整える（大文字小文字は無視）。
+ * 並び順は TAG_OPTIONS の順にそろえ、重複や表記ゆれを正規形に直す。
+ */
+export function sanitizeTags(tags: string[]): string[] {
+  const picked = new Set(
+    tags.map((t) => t.trim().toLowerCase()).filter(Boolean),
+  );
+  return TAG_OPTIONS.filter((opt) => picked.has(opt.toLowerCase()));
+}
 
 /** タグの最大個数（暫定） */
 export const TAGS_MAX = 6;
