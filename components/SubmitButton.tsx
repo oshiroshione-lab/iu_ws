@@ -12,17 +12,20 @@ export function SubmitButton({
   pending,
   variant = "primary",
   className,
+  disabled = false,
 }: {
   idle: string;
   pending: string;
   variant?: ButtonVariant;
   className?: string;
+  /** 送信中でなくても押せないようにしたいとき（例: 何も選んでいない） */
+  disabled?: boolean;
 }) {
   const status = useFormStatus();
   return (
     <button
       type="submit"
-      disabled={status.pending}
+      disabled={status.pending || disabled}
       aria-busy={status.pending}
       className={buttonClasses({ variant, className })}
     >

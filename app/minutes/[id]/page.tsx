@@ -5,8 +5,9 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { minutesRepository } from "@/lib/store";
 import { cn } from "@/lib/cn";
-import { ExtractForm } from "@/components/ExtractForm";
+import { TermExtractor } from "@/components/TermExtractor";
 import { DeleteMinuteButton } from "@/components/DeleteMinuteButton";
+import { OrganizeButton } from "@/components/OrganizeButton";
 import { buttonClasses } from "@/components/ui/Button";
 import { ArrowLeftIcon, PencilIcon, SparklesIcon } from "@/components/ui/icons";
 
@@ -38,6 +39,10 @@ export default async function MinuteDetailPage({
       .filter(Boolean);
   const decisions = toLines(minute.decisions);
   const todos = toLines(minute.todos);
+  // 要約・決定事項・ToDo のどれかに中身があるか（「整える」上書き確認の判断に使う）
+  const hasOrganized = Boolean(
+    minute.summary.trim() || minute.decisions.trim() || minute.todos.trim(),
+  );
 
   return (
     <article className="mx-auto flex max-w-2xl animate-fade-in flex-col gap-8">
@@ -69,6 +74,28 @@ export default async function MinuteDetailPage({
         <dt className="text-sm font-medium text-muted-foreground">参加者</dt>
         <dd className="whitespace-pre-wrap text-sm">{minute.attendees || "—"}</dd>
       </dl>
+
+      {/* ===== AIで整える（本文→要約・決定事項・ToDo） ===== */}
+      <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 p-4">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <SparklesIcon className="h-4 w-4 text-primary" />
+          AIで議事録に整える
+        </div>
+        <p className="text-sm text-muted-foreground">
+          本文（文字起こし）から、要約・決定事項・ToDo を自動でまとめます。結果は下に入り、編集で直せます。
+        </p>
+        <OrganizeButton minuteId={minute.id} hasContent={hasOrganized} />
+      </div>
+
+      {/* ===== 要約 ===== */}
+      {minute.summary.trim() && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-bold tracking-tight">要約</h2>
+          <p className="whitespace-pre-wrap rounded-xl border bg-card p-5 text-base leading-8 text-foreground/90">
+            {minute.summary}
+          </p>
+        </section>
+      )}
 
       {/* ===== 議題 ===== */}
       {minute.agenda.trim() && (
@@ -137,9 +164,9 @@ export default async function MinuteDetailPage({
           この議事録から用語を登録
         </h2>
         <p className="text-sm text-muted-foreground">
-          本文がすでに入っています。必要なら直してから実行すると、AIが専門用語を見つけて辞書に登録します。
+          本文がすでに入っています。「用語の候補を出す」を押すと、AIが専門用語の候補を挙げます。登録したい用語だけ選んでください。
         </p>
-        <ExtractForm defaultText={minute.body} />
+        <TermExtractor defaultText={minute.body} />
       </section>
     </article>
   );

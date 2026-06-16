@@ -87,6 +87,8 @@ export interface Minute {
   meetingDate: string;
   /** 参加者（自由記述。例「太郎、花子」） */
   attendees: string;
+  /** 要約（AIが本文から作る／手で直せる。会議の要点） */
+  summary: string;
   /** 議題（複数行可） */
   agenda: string;
   /** 本文＝議事内容（AIの文字起こし。手で直せる） */
@@ -108,6 +110,7 @@ export interface NewMinuteData {
   title: string;
   meetingDate: string;
   attendees: string;
+  summary: string;
   agenda: string;
   body: string;
   decisions: string;
@@ -119,7 +122,14 @@ export interface NewMinuteData {
 export type MinutePatch = Partial<
   Pick<
     Minute,
-    "title" | "meetingDate" | "attendees" | "agenda" | "body" | "decisions" | "todos"
+    | "title"
+    | "meetingDate"
+    | "attendees"
+    | "summary"
+    | "agenda"
+    | "body"
+    | "decisions"
+    | "todos"
   >
 >;
 

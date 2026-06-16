@@ -288,6 +288,71 @@ export async function createRealtimeTranscriptionSecret(): Promise<string> {
 }
 
 // ============================================================
+// 議事録を「整える」：本文（文字起こし）から、要約・決定事項・ToDo を作る。
+//   料金最優先のため安いテキストモデル（TEXT_MODEL）で1回にまとめて行う。
+//   文字起こしに無いことは作らない（推測で水増ししない）。
+// ============================================================
+
+export interface MinuteOrganizeResult {
+  /** 会議の要点（やさしい日本語・比喩なし） */
+  summary: string;
+  /** 決まったこと（1項目1文） */
+  decisions: string[];
+  /** 次にやること（分かれば「誰が・いつまでに」を含める） */
+  todos: string[];
+}
+
+const ORGANIZE_SYSTEM_PROMPT = [
+  "あなたは会議の文字起こしを読み、議事録として整理する担当です。次のルールを必ず守ってください:",
+  "1) summary: 会議の要点を、やさしい日本語で3〜5文にまとめる。比喩・たとえ話は使わない。",
+  "2) decisions: 会議で『決まったこと』を短い箇条書き（1項目1文）。無ければ空配列。",
+  "3) todos: 『次にやること』を短い箇条書き。担当者や期限が分かれば含める（例:「太郎が資料を用意（今週中）」）。無ければ空配列。",
+  "4) 文字起こしに書かれていないことは作らない（推測で水増ししない）。",
+  "出力は必ず次の形のJSONだけにする（前後に文章をつけない）:",
+  '{ "summary": "要約", "decisions": ["決定1"], "todos": ["やること1"] }',
+].join("\n");
+
+/**
+ * 議事録の本文（文字起こし）から、要約・決定事項・ToDo を作る。
+ * 失敗したら例外を投げる（呼び出し側でユーザーに知らせる）。
+ */
+export async function organizeMinute(body: string): Promise<MinuteOrganizeResult> {
+  if (!hasOpenAIKey) {
+    throw new Error(
+      "OpenAIのAPIキーが設定されていません。.env.local の OPENAI_API_KEY に鍵を入れてください。",
+    );
+  }
+  const completion = await getClient().chat.completions.create({
+    model: TEXT_MODEL,
+    messages: [
+      { role: "system", content: ORGANIZE_SYSTEM_PROMPT },
+      // 長すぎる本文は頭から一定量だけ渡す（料金と安定性のため）。
+      { role: "user", content: body.slice(0, 12000) },
+    ],
+    response_format: { type: "json_object" },
+  });
+
+  const raw = completion.choices[0]?.message?.content ?? "";
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("AIの返答を読み取れませんでした（もう一度お試しください）。");
+  }
+  const obj = (parsed ?? {}) as Record<string, unknown>;
+  const summary = typeof obj.summary === "string" ? obj.summary.trim() : "";
+  const toList = (v: unknown): string[] =>
+    Array.isArray(v)
+      ? v
+          .filter((x): x is string => typeof x === "string")
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .slice(0, 20)
+      : [];
+  return { summary, decisions: toList(obj.decisions), todos: toList(obj.todos) };
+}
+
+// ============================================================
 // ＜将来＞ 議事録から専門用語を自動抽出する機能のための土台。
 //   いまは画面につないでいないが、ここに実装を置いておけば、後で
 //   「議事録ページ」を作って呼び出すだけで使える。

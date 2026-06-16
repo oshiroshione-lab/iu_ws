@@ -44,6 +44,16 @@ export function MinutesEditForm({ minute }: { minute: Minute }) {
         </div>
 
         <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium">要約</span>
+          <Textarea
+            name="summary"
+            defaultValue={minute.summary}
+            rows={3}
+            placeholder="会議の要点（「AIで整える」で自動生成もできます）"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">議題</span>
           <Textarea
             name="agenda"

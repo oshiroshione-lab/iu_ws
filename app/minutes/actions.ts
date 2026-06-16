@@ -7,7 +7,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { minutesRepository } from "@/lib/store";
-import { transcribeAudio, createRealtimeTranscriptionSecret } from "@/lib/ai";
+import {
+  transcribeAudio,
+  createRealtimeTranscriptionSecret,
+  organizeMinute,
+} from "@/lib/ai";
 import {
   validateMinuteTitle,
   validateMinuteBody,
@@ -28,6 +32,7 @@ function readMinuteFields(formData: FormData) {
       String(formData.get("attendees") ?? ""),
       MINUTE_ATTENDEES_MAX_LENGTH,
     ),
+    summary: clipText(String(formData.get("summary") ?? ""), MINUTE_SECTION_MAX_LENGTH),
     agenda: clipText(String(formData.get("agenda") ?? ""), MINUTE_SECTION_MAX_LENGTH),
     decisions: clipText(
       String(formData.get("decisions") ?? ""),
@@ -136,6 +141,41 @@ export async function updateMinuteAction(
   });
   if (!updated) return { error: "対象の議事録が見つかりませんでした" };
 
+  revalidatePath("/minutes");
+  revalidatePath(`/minutes/${id}`);
+  redirect(`/minutes/${id}`);
+}
+
+export type OrganizeState = { error?: string };
+
+/**
+ * 「AIで整える」：本文（文字起こし）から要約・決定事項・ToDo を作り、議事録に保存する。
+ * 要約・決定事項・ToDo の3つだけを置き換える（会議日・参加者・議題・本文はそのまま）。
+ */
+export async function organizeMinuteAction(
+  _prev: OrganizeState,
+  formData: FormData,
+): Promise<OrganizeState> {
+  await requireUser();
+  const id = String(formData.get("id") ?? "");
+  const minute = await minutesRepository.get(id);
+  if (!minute) return { error: "対象の議事録が見つかりませんでした" };
+  if (!minute.body.trim()) {
+    return { error: "本文が空です。先に録音/文字起こしか、本文の入力をしてください。" };
+  }
+
+  let result;
+  try {
+    result = await organizeMinute(minute.body);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "AIの整理に失敗しました" };
+  }
+
+  await minutesRepository.update(id, {
+    summary: result.summary,
+    decisions: result.decisions.join("\n"),
+    todos: result.todos.join("\n"),
+  });
   revalidatePath("/minutes");
   revalidatePath(`/minutes/${id}`);
   redirect(`/minutes/${id}`);

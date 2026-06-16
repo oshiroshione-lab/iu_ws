@@ -5,7 +5,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { hasOpenAIKey } from "@/lib/config";
 import { cn } from "@/lib/cn";
-import { ExtractForm } from "@/components/ExtractForm";
+import { TermExtractor } from "@/components/TermExtractor";
 import { buttonClasses } from "@/components/ui/Button";
 import { ArrowLeftIcon, FileTextIcon } from "@/components/ui/icons";
 
@@ -30,7 +30,7 @@ export default async function ExtractPage() {
           議事録から用語を登録
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          会議の文字起こしやメモを貼り付けると、AIが専門用語を見つけて、まとめて辞書に登録します。
+          会議の文字起こしやメモを貼り付けて「用語の候補を出す」を押すと、AIが専門用語の候補を挙げます。登録したい用語だけ選んで登録できます。
         </p>
       </div>
 
@@ -41,7 +41,7 @@ export default async function ExtractPage() {
         </p>
       )}
 
-      <ExtractForm />
+      <TermExtractor />
     </div>
   );
 }

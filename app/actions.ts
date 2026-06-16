@@ -25,7 +25,7 @@ import {
   REQUEST_NOTE_MAX_LENGTH,
 } from "@/lib/validation";
 import { sanitizeTags } from "@/lib/tags";
-import { buildWordIndex, normalizeForSearch } from "@/lib/terms";
+import { normalizeForSearch } from "@/lib/terms";
 import type { ImageStatus } from "@/lib/types";
 
 /** フォームに返す状態（エラーメッセージを持つ） */
@@ -309,12 +309,64 @@ export async function retryIllustrationAction(formData: FormData): Promise<void>
 }
 
 // ============================================================
-// 議事録（など長文）から専門用語を自動抽出して、まとめて辞書に登録する。
-// 流れ: 貼り付けた文章 → AIが用語候補を抽出 → 1語ずつ説明・関連ワード・タグを作って登録。
-// コスト配慮: 1回で作りすぎないよう件数に上限を設け、イラストはここでは作らない
-//   （重く高くつくため。各用語の詳細ページから後で作れる）。
-//   上限値は lib/validation.ts に置いている（"use server" ファイルは関数しか公開できないため）。
+// 議事録（など長文）から専門用語を見つけて辞書に登録する。2段階に分ける:
+//   ① suggestTermsFromTextAction: AIが用語「候補」を挙げるだけ（登録はしない・安いAI1回）。
+//   ② createSelectedTermsAction: 画面で選ばれた候補だけを登録（1語ずつ説明・関連ワードを作る）。
+// コスト配慮: 選ばれた語だけAIにかける。1回の上限は EXTRACT_MAX_TERMS 件。イラストはここでは作らない。
 // ============================================================
+
+/** 抽出候補1件。既に辞書にある語は existingId 付きで返す（画面で「登録済み」と分かる）。 */
+export type TermCandidate = { word: string; existingId: string | null };
+export type SuggestState = { candidates: TermCandidate[]; error?: string };
+
+/**
+ * 議事録などの文章から、登録できそうな専門用語の「候補」を挙げる（登録はしない）。
+ * 安いAI呼び出し1回だけ（説明文は作らない）。
+ */
+export async function suggestTermsFromTextAction(
+  text: string,
+): Promise<SuggestState> {
+  await requireUser();
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { candidates: [], error: "議事録などの文章を入れてください" };
+  }
+  if (trimmed.length > MINUTES_MAX_LENGTH) {
+    return {
+      candidates: [],
+      error: `文章は${MINUTES_MAX_LENGTH}文字以内にしてください（今: ${trimmed.length}文字）。`,
+    };
+  }
+
+  let words: string[];
+  try {
+    words = await extractTermsFromText(trimmed);
+  } catch (e) {
+    return {
+      candidates: [],
+      error: e instanceof Error ? e.message : "AIの処理に失敗しました",
+    };
+  }
+
+  // 既存の用語（表記ゆれを無視）→ID の早引き表
+  const all = await termRepository.list();
+  const existingByNorm = new Map(all.map((t) => [normalizeForSearch(t.word), t.id]));
+
+  const candidates: TermCandidate[] = [];
+  const seen = new Set<string>();
+  for (const raw of words) {
+    const check = validateWord(raw);
+    if (!check.ok) continue;
+    const norm = normalizeForSearch(check.value);
+    if (seen.has(norm)) continue; // 同じ候補の重複を防ぐ
+    seen.add(norm);
+    candidates.push({
+      word: check.value,
+      existingId: existingByNorm.get(norm) ?? null,
+    });
+  }
+  return { candidates };
+}
 
 export type ExtractState = {
   error?: string;
@@ -330,46 +382,35 @@ export type ExtractState = {
   };
 };
 
-export async function extractAndCreateTermsAction(
+/**
+ * 画面で選ばれた用語だけを辞書に登録する（1語ずつ説明・関連ワードを作る。イラストは作らない）。
+ * すでにある語は飛ばす。1回の上限は EXTRACT_MAX_TERMS 件。
+ */
+export async function createSelectedTermsAction(
   _prev: ExtractState,
   formData: FormData,
 ): Promise<ExtractState> {
   const user = await requireUser();
-
-  const text = String(formData.get("text") ?? "").trim();
-  if (!text) {
-    return { error: "議事録などの文章を貼り付けてください" };
-  }
-  if (text.length > MINUTES_MAX_LENGTH) {
-    return {
-      error: `文章は${MINUTES_MAX_LENGTH}文字以内にしてください（今: ${text.length}文字）。長い場合は分けて貼り付けてください。`,
-    };
+  const words = formData.getAll("words").map((w) => String(w));
+  if (words.length === 0) {
+    return { error: "登録する用語を1つ以上選んでください" };
   }
 
-  // 1) 文章から用語候補を抜き出す
-  let candidates: string[];
-  try {
-    candidates = await extractTermsFromText(text);
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "AIの処理に失敗しました" };
-  }
-
-  // 2) すでにある用語は飛ばす（重複登録を防ぐ）。
-  //    seen には「既存の用語名」を入れておき、登録するたびに足して、同じ文章内の重複も防ぐ。
-  const seen = new Set(buildWordIndex(await termRepository.list()).keys());
+  // 既存の用語（表記ゆれ無視）。登録するたびに足して、同じ実行内の重複も防ぐ。
+  const all = await termRepository.list();
+  const seen = new Set(all.map((t) => normalizeForSearch(t.word)));
   const added: string[] = [];
   const skipped: string[] = [];
   const failed: string[] = [];
   let overflow = 0;
 
-  for (const raw of candidates) {
+  for (const raw of words) {
     const check = validateWord(raw);
     if (!check.ok) continue;
-    const word = check.value;
-    const key = word.toLowerCase();
+    const norm = normalizeForSearch(check.value);
 
-    if (seen.has(key)) {
-      skipped.push(word);
+    if (seen.has(norm)) {
+      skipped.push(check.value);
       continue;
     }
     if (added.length >= EXTRACT_MAX_TERMS) {
@@ -377,22 +418,23 @@ export async function extractAndCreateTermsAction(
       continue;
     }
 
-    // 3) 1語ずつ説明・関連ワード・タグを作って登録（イラストは作らない）
+    // 1語ずつ説明・関連ワードを作って登録（タグは後から固定リストで付ける／イラストは作らない）
     try {
-      const research = await researchTerm(word);
+      const research = await researchTerm(check.value);
+      const word = canonicalizeWord(check.value, research.word); // 正式な表記に整える
       await termRepository.create({
-        word: canonicalizeWord(word, research.word), // 正式な表記に整える
+        word,
         description: research.description,
         relatedWords: research.relatedWords,
-        tags: [], // タグは後から固定リストで付けられる（まとめ登録では付けない）
+        tags: [],
         imageUrl: null,
         imageStatus: "none",
         createdBy: user,
       });
-      seen.add(key);
+      seen.add(normalizeForSearch(word));
       added.push(word);
     } catch {
-      failed.push(word);
+      failed.push(check.value);
     }
   }
 
