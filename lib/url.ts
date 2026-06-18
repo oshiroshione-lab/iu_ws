@@ -5,7 +5,7 @@
 // 1本のクエリ文字列にする。例: 検索したまま並び順だけ変える、など。
 
 /** URLに並べるキーの順番（読みやすいURLにするため決め打ちで並べる）。 */
-const KEY_ORDER = ["q", "tags", "sort", "view"] as const;
+const KEY_ORDER = ["q", "tags", "sort", "view", "cols"] as const;
 
 /**
  * いまの条件 base に changes を上書きして混ぜ、"?a=1&b=2" を返す純粋関数。

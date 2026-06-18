@@ -19,7 +19,7 @@ export function TagFilter({
   /** いま選ばれているタグの一覧（複数可） */
   activeTags?: string[];
   /** いまの検索・並び順・表示などの条件（タグを切り替えても消えないよう引き継ぐ） */
-  current?: { q?: string; tags?: string; sort?: string; view?: string };
+  current?: { q?: string; tags?: string; sort?: string; view?: string; cols?: string };
 }) {
   if (tags.length === 0) return null;
 

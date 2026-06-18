@@ -8,6 +8,8 @@ import { logoutAction } from "@/app/actions";
 import { computePricingSummary } from "@/lib/pricing";
 import { buttonClasses } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { DesignToggle } from "@/components/DesignToggle";
+import { toDesignPreset } from "@/lib/design";
 import { CostMenu } from "@/components/CostMenu";
 import { IllustrationNotifier } from "@/components/IllustrationNotifier";
 import {
@@ -30,12 +32,23 @@ export default async function RootLayout({
   const [user, cookieStore] = await Promise.all([getCurrentUser(), cookies()]);
   // テーマは cookie で覚えておく。ここでクラスを決めるので、開いた瞬間のちらつきが出ない。
   const isDark = cookieStore.get("theme")?.value === "dark";
+  // 見た目のプリセット（中央寄せのクラシック／横幅いっぱいのワイド）も cookie で覚える。
+  const design = toDesignPreset(cookieStore.get("design")?.value);
+  // クラシックは中央寄せ（max-w-5xl）、ワイドは横幅いっぱい＋画面幅に応じた余白。
+  const headerInner =
+    design === "classic"
+      ? "mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4"
+      : "flex h-14 w-full items-center justify-between gap-3 px-4 sm:px-6 lg:px-8";
+  const mainClass =
+    design === "classic"
+      ? "mx-auto w-full max-w-5xl flex-1 px-4 py-8"
+      : "w-full flex-1 px-4 py-8 sm:px-6 lg:px-8";
 
   return (
     <html lang="ja" className={cn("h-full", isDark && "dark")} suppressHydrationWarning>
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4">
+          <div className={headerInner}>
             <Link
               href="/"
               className="flex items-center gap-2 font-semibold tracking-tight text-foreground"
@@ -77,6 +90,7 @@ export default async function RootLayout({
                     用語を登録
                   </Link>
                   <CostMenu summary={computePricingSummary()} />
+                  <DesignToggle initial={design} />
                   <ThemeToggle />
                   <span className="hidden items-center gap-1.5 px-2 text-sm text-muted-foreground md:inline-flex">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-xs font-medium text-secondary-foreground">
@@ -100,7 +114,7 @@ export default async function RootLayout({
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+        <main className={mainClass}>
           {children}
         </main>
 

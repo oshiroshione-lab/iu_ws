@@ -21,8 +21,8 @@ export function SearchBar({
 }: {
   defaultQuery?: string;
   terms?: TermLite[];
-  /** 検索しても消えないよう、フォーム送信時に一緒に送る今の条件（タグ・並び順・表示）。 */
-  hidden?: { tags?: string; sort?: string; view?: string };
+  /** 検索しても消えないよう、フォーム送信時に一緒に送る今の条件（タグ・並び順・表示・列数）。 */
+  hidden?: { tags?: string; sort?: string; view?: string; cols?: string };
 }) {
   const router = useRouter();
   const [query, setQuery] = useState(defaultQuery);
@@ -94,6 +94,7 @@ export function SearchBar({
         {hidden.tags && <input type="hidden" name="tags" value={hidden.tags} />}
         {hidden.sort && <input type="hidden" name="sort" value={hidden.sort} />}
         {hidden.view && <input type="hidden" name="view" value={hidden.view} />}
+        {hidden.cols && <input type="hidden" name="cols" value={hidden.cols} />}
       </form>
 
       {showList && (

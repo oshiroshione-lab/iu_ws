@@ -10,7 +10,10 @@ import {
   sortTerms,
   toSortKey,
   toViewMode,
+  toGridCols,
+  DEFAULT_GRID_COLS,
   isRecentlyAdded,
+  type GridCols,
 } from "@/lib/terms";
 import { buildQuery } from "@/lib/url";
 import { TermCard } from "@/components/TermCard";
@@ -22,6 +25,17 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { buttonClasses } from "@/components/ui/Button";
 import { BookIcon, PlusIcon, SearchIcon } from "@/components/ui/icons";
 
+// 列数ごとのグリッドのクラス。Tailwind は“完全な文字列”でしかクラスを拾わないので、
+// `lg:grid-cols-${n}` のような組み立てはせず、ここに決め打ちで全部書いておく。
+// スマホ・中くらいの画面では詰めすぎないよう列数を抑え、広い画面で選んだ列数にする。
+const GRID_COLS_CLASS: Record<GridCols, string> = {
+  2: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2",
+  3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+  4: "grid-cols-2 sm:grid-cols-2 lg:grid-cols-4",
+  5: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5",
+  6: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6",
+};
+
 export default async function HomePage({
   searchParams,
 }: {
@@ -31,15 +45,17 @@ export default async function HomePage({
     tags?: string;
     sort?: string;
     view?: string;
+    cols?: string;
   }>;
 }) {
   await requireUser();
-  const { q, tag, tags: tagsParam, sort, view } = await searchParams;
+  const { q, tag, tags: tagsParam, sort, view, cols } = await searchParams;
   const query = (q ?? "").trim();
   // タグは複数選べる（?tags=AI,Web）。旧 ?tag= も読めるようにして後方互換を保つ。
   const activeTags = parseTagsParam(tagsParam ?? tag);
   const sortKey = toSortKey(sort);
   const viewMode = toViewMode(view);
+  const gridCols = toGridCols(cols);
 
   // タグのチップは常に全件から作る。表示する用語は検索とタグで絞り込み、並び替える。
   const all = await termRepository.list();
@@ -57,6 +73,7 @@ export default async function HomePage({
     tags: activeTags.length > 0 ? activeTags.join(",") : undefined,
     sort: sortKey === "new" ? undefined : sortKey,
     view: viewMode === "grid" ? undefined : viewMode,
+    cols: gridCols === DEFAULT_GRID_COLS ? undefined : String(gridCols),
   };
 
   // 太鼓UI（縦／横の積層）に渡す軽い形に変換する。日付や「新着」はここ（サーバー）で決める。
@@ -88,7 +105,12 @@ export default async function HomePage({
       <SearchBar
         defaultQuery={query}
         terms={all.map((t) => ({ id: t.id, word: t.word, tags: t.tags }))}
-        hidden={{ tags: current.tags, sort: current.sort, view: current.view }}
+        hidden={{
+          tags: current.tags,
+          sort: current.sort,
+          view: current.view,
+          cols: current.cols,
+        }}
       />
 
       <TagFilter tags={tags} activeTags={activeTags} current={current} />
@@ -139,7 +161,7 @@ export default async function HomePage({
           />
         )
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={`grid gap-4 ${GRID_COLS_CLASS[gridCols]}`}>
           {terms.map((t) => (
             <TermCard key={t.id} term={t} />
           ))}

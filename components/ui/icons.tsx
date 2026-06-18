@@ -28,6 +28,14 @@ export function PlusIcon(props: IconProps) {
   );
 }
 
+export function MinusIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} aria-hidden="true">
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
 export function SearchIcon(props: IconProps) {
   return (
     <svg {...base(props)} aria-hidden="true">
@@ -240,6 +248,24 @@ export function ColumnsIcon(props: IconProps) {
     <svg {...base(props)} aria-hidden="true">
       <rect x="4" y="3" width="6" height="18" rx="1.5" />
       <rect x="14" y="3" width="6" height="18" rx="1.5" />
+    </svg>
+  );
+}
+
+/** 外向きの矢印（＝全幅・ワイド表示にひろげる） */
+export function MaximizeIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} aria-hidden="true">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3" />
+    </svg>
+  );
+}
+
+/** 内向きの矢印（＝中央寄せ・クラシック表示にちぢめる） */
+export function MinimizeIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} aria-hidden="true">
+      <path d="M8 3v3a2 2 0 0 1-2 2H3M16 3v3a2 2 0 0 0 2 2h3M21 16h-3a2 2 0 0 0-2 2v3M3 16h3a2 2 0 0 1 2 2v3" />
     </svg>
   );
 }

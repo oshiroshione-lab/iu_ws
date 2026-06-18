@@ -167,6 +167,21 @@ export function toViewMode(value: string | undefined): ViewMode {
   return value === "vstack" || value === "hstack" ? value : "grid";
 }
 
+/** グリッド表示で横に並べる枚数（列数）。2〜6から選べる（少ないほどカードが大きい）。 */
+export type GridCols = 2 | 3 | 4 | 5 | 6;
+
+/** 列数の既定。これまでの見た目を変えないよう 3 にしている。 */
+export const DEFAULT_GRID_COLS: GridCols = 3;
+
+/** 選べる列数の一覧（小さい順）。先頭が最小・末尾が最大。 */
+export const GRID_COLS_OPTIONS: GridCols[] = [2, 3, 4, 5, 6];
+
+/** 文字列を安全に GridCols へ。2〜6の範囲外や不明な値は既定（3）にする。 */
+export function toGridCols(value: string | undefined): GridCols {
+  const n = Number(value);
+  return n === 2 || n === 4 || n === 5 || n === 6 ? n : DEFAULT_GRID_COLS;
+}
+
 /** 用語名 → 用語 の早引き表（大文字小文字を無視）。関連ワードの相互リンクに使う */
 export function buildWordIndex(terms: Term[]): Map<string, Term> {
   const index = new Map<string, Term>();
