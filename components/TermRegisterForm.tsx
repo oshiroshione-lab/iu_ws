@@ -24,7 +24,6 @@ import { buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { TagPicker } from "@/components/TagPicker";
 import { SparklesIcon, SearchIcon } from "@/components/ui/icons";
 
 // 登録時に待つのは「説明文の作成」まで（イラストは登録後に裏で作る）。
@@ -214,10 +213,10 @@ export function TermRegisterForm({
           </label>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">タグ（任意・1つだけ）</span>
-            <TagPicker />
+            <span className="text-sm font-medium">タグ（分野）</span>
             <span className="text-xs text-muted-foreground">
-              当てはまる分野を1つだけ選べます（あとで編集もできます）。
+              タグはAIが内容に合わせて、決まった分野（AI / Web / データベース など）の中から
+              自動で1つ付けます。あとで編集ページから変更できます。
             </span>
           </div>
 

@@ -1,12 +1,23 @@
-// トップページ：用語の一覧・検索・タグ絞り込み（F-05 / F-06）。
+// トップページ：用語の一覧・検索・タグ絞り込み・並び替え・表示切替（F-05 / F-06）。
 
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { termRepository } from "@/lib/store";
-import { collectTags, filterByTag } from "@/lib/terms";
+import {
+  collectTags,
+  filterByTags,
+  parseTagsParam,
+  sortTerms,
+  toSortKey,
+  toViewMode,
+  isRecentlyAdded,
+} from "@/lib/terms";
+import { buildQuery } from "@/lib/url";
 import { TermCard } from "@/components/TermCard";
+import { TaikoSelector, type PlateTerm } from "@/components/TaikoSelector";
 import { SearchBar } from "@/components/SearchBar";
 import { TagFilter } from "@/components/TagFilter";
+import { TermsToolbar } from "@/components/TermsToolbar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { buttonClasses } from "@/components/ui/Button";
 import { BookIcon, PlusIcon, SearchIcon } from "@/components/ui/icons";
@@ -14,20 +25,56 @@ import { BookIcon, PlusIcon, SearchIcon } from "@/components/ui/icons";
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tag?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    tag?: string;
+    tags?: string;
+    sort?: string;
+    view?: string;
+  }>;
 }) {
   await requireUser();
-  const { q, tag } = await searchParams;
+  const { q, tag, tags: tagsParam, sort, view } = await searchParams;
   const query = (q ?? "").trim();
-  const activeTag = (tag ?? "").trim();
+  // タグは複数選べる（?tags=AI,Web）。旧 ?tag= も読めるようにして後方互換を保つ。
+  const activeTags = parseTagsParam(tagsParam ?? tag);
+  const sortKey = toSortKey(sort);
+  const viewMode = toViewMode(view);
 
-  // タグのチップは常に全件から作る。表示する用語は検索とタグで絞り込む。
+  // タグのチップは常に全件から作る。表示する用語は検索とタグで絞り込み、並び替える。
   const all = await termRepository.list();
   const tags = collectTags(all);
   let terms = query ? await termRepository.search(query) : all;
-  if (activeTag) terms = filterByTag(terms, activeTag);
+  if (activeTags.length > 0) terms = filterByTags(terms, activeTags);
+  terms = sortTerms(terms, sortKey);
 
-  const filtering = Boolean(query || activeTag);
+  const filtering = Boolean(query || activeTags.length > 0);
+
+  // ツールバー・タグ・検索が互いの条件を引き継げるよう、今の条件をまとめて渡す。
+  // 既定値（新しい順・グリッド）はURLに入れないので undefined にしておく。
+  const current = {
+    q: query || undefined,
+    tags: activeTags.length > 0 ? activeTags.join(",") : undefined,
+    sort: sortKey === "new" ? undefined : sortKey,
+    view: viewMode === "grid" ? undefined : viewMode,
+  };
+
+  // 太鼓UI（縦／横の積層）に渡す軽い形に変換する。日付や「新着」はここ（サーバー）で決める。
+  const now = Date.now();
+  const plates: PlateTerm[] = terms.map((t) => ({
+    id: t.id,
+    word: t.word,
+    description: t.description,
+    tags: t.tags,
+    imageUrl: t.imageUrl,
+    verified: Boolean(t.verifiedBy),
+    likeCount: t.likedBy.length,
+    createdBy: t.createdBy,
+    dateLabel: t.createdAt
+      ? new Date(t.createdAt).toLocaleDateString("ja-JP")
+      : "",
+    isNew: isRecentlyAdded(t.createdAt, now),
+  }));
 
   return (
     <div className="flex animate-fade-in flex-col gap-6">
@@ -41,14 +88,17 @@ export default async function HomePage({
       <SearchBar
         defaultQuery={query}
         terms={all.map((t) => ({ id: t.id, word: t.word, tags: t.tags }))}
+        hidden={{ tags: current.tags, sort: current.sort, view: current.view }}
       />
 
-      <TagFilter tags={tags} activeTag={activeTag || undefined} />
+      <TagFilter tags={tags} activeTags={activeTags} current={current} />
+
+      {all.length > 0 && <TermsToolbar current={current} />}
 
       {filtering && terms.length > 0 && (
         <p className="text-sm text-muted-foreground">
           {query && <>「{query}」</>}
-          {activeTag && <>タグ「{activeTag}」</>}
+          {activeTags.length > 0 && <>タグ「{activeTags.join("・")}」</>}
           の結果: {terms.length}件
         </p>
       )}
@@ -76,21 +126,29 @@ export default async function HomePage({
             description={
               query
                 ? `「${query}」に一致する用語は見つかりませんでした。別の言葉で検索してみてください。`
-                : `タグ「${activeTag}」の用語は見つかりませんでした。`
+                : `タグ「${activeTags.join("・")}」の用語は見つかりませんでした。`
             }
             action={
-              <Link href="/" className={buttonClasses({ variant: "outline" })}>
+              <Link
+                href={"/" + buildQuery({ sort: current.sort, view: current.view })}
+                className={buttonClasses({ variant: "outline" })}
+              >
                 すべての用語を見る
               </Link>
             }
           />
         )
-      ) : (
+      ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {terms.map((t) => (
             <TermCard key={t.id} term={t} />
           ))}
         </div>
+      ) : (
+        <TaikoSelector
+          terms={plates}
+          orientation={viewMode === "hstack" ? "horizontal" : "vertical"}
+        />
       )}
     </div>
   );

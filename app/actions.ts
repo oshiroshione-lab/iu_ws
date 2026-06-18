@@ -12,6 +12,7 @@ import { hasOpenAIKey } from "@/lib/config";
 import { termRepository, requestRepository } from "@/lib/store";
 import {
   researchTerm,
+  chooseTag,
   generateIllustrationBase64,
   extractTermsFromText,
   suggestItTerms,
@@ -71,9 +72,6 @@ export async function createTermAction(
   );
   if (duplicate) redirect(`/terms/${duplicate.id}`);
 
-  // タグは固定リストから「1つだけ」選んでもらう（AIには作らせない）。念のため最大1個に絞る。
-  const tags = sanitizeTags(formData.getAll("tags").map(String)).slice(0, 1);
-
   // 説明文・関連ワードはAI必須。失敗したら登録せずにエラーを返す。
   let research;
   try {
@@ -84,6 +82,9 @@ export async function createTermAction(
 
   // 用語名は、AIが整えた正式な表記（大文字小文字など）を使う（別語へのすり替えは防ぐ）。
   const word = canonicalizeWord(check.value, research.word);
+
+  // タグはAIが固定リスト（TAG_OPTIONS）の中から内容に合うものを自動で1つ選ぶ（手入力はしない）。
+  const tags = [await chooseTag(word, research.description)];
 
   // 先にテキストを保存。イラストはこれから裏で作るので "generating"（キーが無ければ作らないので "none"）。
   const term = await termRepository.create({
@@ -418,15 +419,16 @@ export async function createSelectedTermsAction(
       continue;
     }
 
-    // 1語ずつ説明・関連ワードを作って登録（タグは後から固定リストで付ける／イラストは作らない）
+    // 1語ずつ説明・関連ワードを作り、タグもAIが固定リストから自動で1つ選んで登録（イラストは作らない）
     try {
       const research = await researchTerm(check.value);
       const word = canonicalizeWord(check.value, research.word); // 正式な表記に整える
+      const tags = [await chooseTag(word, research.description)];
       await termRepository.create({
         word,
         description: research.description,
         relatedWords: research.relatedWords,
-        tags: [],
+        tags,
         imageUrl: null,
         imageStatus: "none",
         createdBy: user,

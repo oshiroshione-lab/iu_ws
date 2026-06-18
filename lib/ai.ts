@@ -20,6 +20,7 @@ import {
   TRANSCRIBE_MODEL,
   hasOpenAIKey,
 } from "@/lib/config";
+import { TAG_OPTIONS, type TagOption } from "@/lib/tags";
 
 /** OpenAIクライアントは1つだけ作って使い回す */
 let client: OpenAI | null = null;
@@ -95,6 +96,55 @@ export async function researchTerm(word: string): Promise<ResearchResult> {
   }
   // word が空なら、呼び出し側で入力した用語名をそのまま使う。
   return { word: canonicalWord || word, description, relatedWords };
+}
+
+// 用語に「タグ（分野）」を自動で付ける（F-05）。
+//   ・AIに新しいタグを作らせず、固定の選択肢（lib/tags.ts の TAG_OPTIONS）の中から
+//     最も合うものを1つだけ選ばせる。表記ゆれや増えすぎを防ぐため。
+//   ・料金最優先のため、安いテキストモデル(nano)で短く1回だけ。
+//   ・best-effort: 失敗・キー未設定・候補外のときは「その他」を返す（登録は止めない）。
+const TAG_SYSTEM_PROMPT = [
+  "あなたは、IT・ソフトウェア分野の用語を、決められたカテゴリのどれか1つに分類する担当です。",
+  "次の選択肢の中から、その用語に最も当てはまるものを「1つだけ」選びます:",
+  TAG_OPTIONS.join(" / "),
+  "ルール:",
+  "1) 必ず上の選択肢の言葉を、一字一句そのまま使う（新しい言葉は作らない・複数は選ばない）。",
+  "2) どれにも当てはめにくいときだけ「その他」を選ぶ。",
+  '出力は必ず次の形のJSONだけにする（前後に文章をつけない）: { "tag": "選んだカテゴリ" }',
+].join("\n");
+
+/**
+ * 用語名と説明文から、固定の選択肢の中で最も合うタグを1つ選んで返す。
+ * 失敗・未設定・候補外のときは「その他」を返す（例外は投げない）。
+ */
+export async function chooseTag(
+  word: string,
+  description: string,
+): Promise<TagOption> {
+  if (!hasOpenAIKey) return "その他";
+  try {
+    const completion = await getClient().chat.completions.create({
+      model: TEXT_MODEL,
+      messages: [
+        { role: "system", content: TAG_SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: `用語: ${word}\n説明: ${description.slice(0, 600)}`,
+        },
+      ],
+      response_format: { type: "json_object" },
+    });
+    const raw = completion.choices[0]?.message?.content ?? "";
+    const obj = JSON.parse(raw) as Record<string, unknown>;
+    const picked = typeof obj.tag === "string" ? obj.tag.trim() : "";
+    const match = TAG_OPTIONS.find(
+      (t) => t.toLowerCase() === picked.toLowerCase(),
+    );
+    return match ?? "その他";
+  } catch (err) {
+    console.error("[ai] タグの自動分類に失敗（「その他」にします）:", err);
+    return "その他";
+  }
 }
 
 // 登録フォームの入力補助（サジェスト）。入力しかけの文字列から、登録候補になりそうな

@@ -17,9 +17,12 @@ type TermLite = { id: string; word: string; tags: string[] };
 export function SearchBar({
   defaultQuery = "",
   terms = [],
+  hidden = {},
 }: {
   defaultQuery?: string;
   terms?: TermLite[];
+  /** 検索しても消えないよう、フォーム送信時に一緒に送る今の条件（タグ・並び順・表示）。 */
+  hidden?: { tags?: string; sort?: string; view?: string };
 }) {
   const router = useRouter();
   const [query, setQuery] = useState(defaultQuery);
@@ -87,6 +90,10 @@ export function SearchBar({
           aria-label="用語を検索"
           className="h-11 pl-10 pr-4"
         />
+        {/* 検索しても今の絞り込み・並び順・表示が消えないよう、一緒に送る。 */}
+        {hidden.tags && <input type="hidden" name="tags" value={hidden.tags} />}
+        {hidden.sort && <input type="hidden" name="sort" value={hidden.sort} />}
+        {hidden.view && <input type="hidden" name="view" value={hidden.view} />}
       </form>
 
       {showList && (

@@ -203,3 +203,75 @@ export function StopIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function SortIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} aria-hidden="true">
+      <path d="M8 3v18M8 3 4 7M8 3l4 4" />
+      <path d="M16 21V3M16 21l-4-4M16 21l4-4" />
+    </svg>
+  );
+}
+
+export function LayoutGridIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
+/** 横長の帯を縦に積んだ形（＝縦並びの「積層式」を表すアイコン） */
+export function RowsIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} aria-hidden="true">
+      <rect x="3" y="4" width="18" height="6" rx="1.5" />
+      <rect x="3" y="14" width="18" height="6" rx="1.5" />
+    </svg>
+  );
+}
+
+/** 縦長の札を横に並べた形（＝横並びの「積層式」を表すアイコン） */
+export function ColumnsIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} aria-hidden="true">
+      <rect x="4" y="3" width="6" height="18" rx="1.5" />
+      <rect x="14" y="3" width="6" height="18" rx="1.5" />
+    </svg>
+  );
+}
+
+export function ChevronLeftIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} aria-hidden="true">
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} aria-hidden="true">
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
+export function ChevronUpIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} aria-hidden="true">
+      <path d="m6 15 6-6 6 6" />
+    </svg>
+  );
+}
+
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} aria-hidden="true">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}

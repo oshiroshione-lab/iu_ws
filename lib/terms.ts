@@ -64,6 +64,109 @@ export function filterByTag(terms: Term[], tag: string): Term[] {
   return terms.filter((t) => t.tags.some((x) => x.toLowerCase() === key));
 }
 
+/**
+ * 複数のタグの「どれか1つでも」持つ用語に絞る（＝和集合・OR）。大文字小文字は無視。
+ * tags が空なら全件をそのまま返す（絞り込みなし）。
+ * ※ 用語は今ひとつにつき1タグなので、AND（全部持つ）だと2つ選ぶと0件になる。
+ *   なので「いずれかに一致」にして、複数選ぶほど表示が広がるようにしている。
+ */
+export function filterByTags(terms: Term[], tags: string[]): Term[] {
+  const keys = new Set(
+    tags.map((t) => t.trim().toLowerCase()).filter(Boolean),
+  );
+  if (keys.size === 0) return terms;
+  return terms.filter((t) => t.tags.some((x) => keys.has(x.toLowerCase())));
+}
+
+/**
+ * タグの選択リストに対して1つ分のON/OFFを切り替える純粋関数。
+ * すでに入っていれば外し、入っていなければ足して、新しい配列を返す。
+ * （絞り込みチップの「もう一度押すと解除」に使う。空になれば呼び出し側で「すべて」に戻す。）
+ */
+export function toggleTag(tags: string[], tag: string): string[] {
+  const key = tag.trim().toLowerCase();
+  if (!key) return tags;
+  const exists = tags.some((t) => t.trim().toLowerCase() === key);
+  return exists
+    ? tags.filter((t) => t.trim().toLowerCase() !== key)
+    : [...tags, tag];
+}
+
+/**
+ * URLの `?tags=AI,Web` のような文字列を、タグの配列に直す（カンマ区切り）。
+ * 空白を除き、重複（大文字小文字は無視）を取り除く。未指定なら空配列。
+ */
+export function parseTagsParam(raw: string | undefined): string[] {
+  if (!raw) return [];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const part of raw.split(",")) {
+    const value = part.trim();
+    if (!value) continue;
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(value);
+  }
+  return result;
+}
+
+// ── 並び順（ソート） ───────────────────────────────────────────────
+
+/** 一覧の並び順のキー。URLの `?sort=` に入る値。 */
+export type SortKey = "new" | "old" | "name" | "likes";
+
+/** 並び順の選択肢（画面のボタンに使う。先頭の new が既定）。 */
+export const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "new", label: "新しい順" },
+  { key: "old", label: "古い順" },
+  { key: "name", label: "名前順" },
+  { key: "likes", label: "いいね順" },
+];
+
+/** 文字列を安全に SortKey へ。知らない値は既定（new）にする。 */
+export function toSortKey(value: string | undefined): SortKey {
+  return value === "old" || value === "name" || value === "likes"
+    ? value
+    : "new";
+}
+
+/**
+ * 用語を指定の並び順に並べ替える純粋関数（元の配列は変えない）。
+ *  - new   新しい順（登録日時が新しいものが上）
+ *  - old   古い順（登録日時が古いものが上）
+ *  - name  名前順（あいうえお／ABC順。日本語にやさしい比較）
+ *  - likes いいね順（いいねが多いものが上。同数なら新しい順）
+ */
+export function sortTerms(terms: Term[], sort: SortKey): Term[] {
+  const copy = [...terms];
+  switch (sort) {
+    case "old":
+      return copy.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    case "name":
+      return copy.sort((a, b) => a.word.localeCompare(b.word, "ja"));
+    case "likes":
+      return copy.sort(
+        (a, b) =>
+          b.likedBy.length - a.likedBy.length ||
+          b.createdAt.localeCompare(a.createdAt),
+      );
+    case "new":
+    default:
+      return copy.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+}
+
+// ── 表示の形（ビュー） ─────────────────────────────────────────────
+
+/** 一覧の見せ方。grid=カードのタイル / vstack=縦の積層 / hstack=横の積層（太鼓の達人の曲選び風）。 */
+export type ViewMode = "grid" | "vstack" | "hstack";
+
+/** 文字列を安全に ViewMode へ。知らない値は既定（grid）にする。 */
+export function toViewMode(value: string | undefined): ViewMode {
+  return value === "vstack" || value === "hstack" ? value : "grid";
+}
+
 /** 用語名 → 用語 の早引き表（大文字小文字を無視）。関連ワードの相互リンクに使う */
 export function buildWordIndex(terms: Term[]): Map<string, Term> {
   const index = new Map<string, Term>();

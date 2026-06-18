@@ -111,7 +111,7 @@ export default async function TermDetailPage({
             {term.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {term.tags.map((tag) => (
-                  <Link key={tag} href={`/?tag=${encodeURIComponent(tag)}`}>
+                  <Link key={tag} href={`/?tags=${encodeURIComponent(tag)}`}>
                     <Badge variant="accent" className="hover:opacity-80">
                       {tag}
                     </Badge>
