@@ -52,3 +52,6 @@ next-env.d.ts
 !/scratch/.gitkeep
 # Windows のスクリーンショット（共有しない）
 スクリーンショット*.png
+
+# Cloud SQL Auth Proxy（コミットしない・35MB）
+cloud-sql-proxy.exe
