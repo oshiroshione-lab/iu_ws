@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { requireUser, logout } from "@/lib/auth";
+import { requireUser, actorFrom } from "@/lib/auth";
 import { hasOpenAIKey } from "@/lib/config";
 import { termRepository, requestRepository } from "@/lib/store";
 import {
@@ -59,7 +59,7 @@ export async function createTermAction(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const user = await requireUser();
+  const user = actorFrom(formData);
 
   const check = validateWord(String(formData.get("word") ?? ""));
   if (!check.ok) return { error: check.message };
@@ -209,7 +209,7 @@ export async function updateTermAction(
  * 誰が・いつ確認したかを残す。
  */
 export async function verifyTermAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = actorFrom(formData);
   const id = String(formData.get("id") ?? "");
   await termRepository.update(id, {
     verifiedBy: user,
@@ -232,7 +232,7 @@ export async function unverifyTermAction(formData: FormData): Promise<void> {
 
 /** いいねの ON/OFF を切り替える（自分の名前を足す/外す）。 */
 export async function toggleLikeAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = actorFrom(formData);
   const id = String(formData.get("id") ?? "");
   const term = await termRepository.get(id);
   if (!term) redirect("/");
@@ -251,7 +251,7 @@ export async function addCommentAction(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const user = await requireUser();
+  const user = actorFrom(formData);
   const id = String(formData.get("id") ?? "");
   const text = String(formData.get("text") ?? "").trim();
   if (!text) return { error: "コメントを入力してください" };
@@ -391,7 +391,7 @@ export async function createSelectedTermsAction(
   _prev: ExtractState,
   formData: FormData,
 ): Promise<ExtractState> {
-  const user = await requireUser();
+  const user = actorFrom(formData);
   const words = formData.getAll("words").map((w) => String(w));
   if (words.length === 0) {
     return { error: "登録する用語を1つ以上選んでください" };
@@ -466,7 +466,7 @@ export async function createRequestAction(
   _prev: RequestFormState,
   formData: FormData,
 ): Promise<RequestFormState> {
-  const user = await requireUser();
+  const user = actorFrom(formData);
 
   const check = validateWord(String(formData.get("word") ?? ""));
   if (!check.ok) return { error: check.message };
@@ -494,10 +494,4 @@ export async function deleteRequestAction(formData: FormData): Promise<void> {
   await requestRepository.delete(id);
   revalidatePath("/requests");
   redirect("/requests");
-}
-
-/** ログアウト */
-export async function logoutAction(): Promise<void> {
-  await logout();
-  redirect("/login");
 }

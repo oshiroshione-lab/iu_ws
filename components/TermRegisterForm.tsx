@@ -20,6 +20,7 @@ import {
   type FormState,
 } from "@/app/actions";
 import { matchTerms } from "@/lib/terms";
+import { MeField } from "@/components/MeField";
 import { buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -130,6 +131,7 @@ export function TermRegisterForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <MeField />
       {pending ? (
         <GeneratingPreview message={STEPS[step]} word={word.trim()} />
       ) : (

@@ -4,7 +4,6 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireUser } from "@/lib/auth";
 import { termRepository } from "@/lib/store";
 import {
   buildWordIndex,
@@ -17,13 +16,14 @@ import {
   retryIllustrationAction,
   verifyTermAction,
   unverifyTermAction,
-  toggleLikeAction,
-  deleteCommentAction,
 } from "@/app/actions";
 import { cn } from "@/lib/cn";
 import { DeleteTermButton } from "@/components/DeleteTermButton";
 import { SubmitButton } from "@/components/SubmitButton";
 import { CommentForm } from "@/components/CommentForm";
+import { LikeButton } from "@/components/LikeButton";
+import { CommentDeleteButton } from "@/components/CommentDeleteButton";
+import { MeField } from "@/components/MeField";
 import { Badge } from "@/components/ui/Badge";
 import { buttonClasses } from "@/components/ui/Button";
 import {
@@ -33,7 +33,6 @@ import {
   LinkIcon,
   ImageIcon,
   CheckCircleIcon,
-  HeartIcon,
   MessageIcon,
 } from "@/components/ui/icons";
 
@@ -42,7 +41,6 @@ export default async function TermDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const user = await requireUser();
   const { id } = await params;
 
   // 全件を1回だけ取り、相互リンク（早引き表）と被リンクを計算する。
@@ -76,7 +74,6 @@ export default async function TermDetailPage({
   const verifiedDate = term.verifiedAt
     ? new Date(term.verifiedAt).toLocaleDateString("ja-JP")
     : "";
-  const liked = term.likedBy.includes(user);
 
   // ヒーローの“リード文”は説明文の最初の1文だけ使う（残りは下の説明セクションで全文表示）。
   const lead = term.description.split("。")[0]?.trim();
@@ -211,6 +208,7 @@ export default async function TermDetailPage({
             </span>
             <form action={verifyTermAction} className="ml-auto">
               <input type="hidden" name="id" value={term.id} />
+              <MeField />
               <SubmitButton
                 idle="内容を確認した"
                 pending="保存中…"
@@ -339,23 +337,7 @@ export default async function TermDetailPage({
               </span>
             )}
           </h2>
-          <form action={toggleLikeAction}>
-            <input type="hidden" name="id" value={term.id} />
-            <button
-              type="submit"
-              className={cn(
-                buttonClasses({ variant: "outline", size: "sm" }),
-                liked && "border-rose-400 text-rose-600 dark:text-rose-400",
-              )}
-              aria-pressed={liked}
-            >
-              <HeartIcon className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
-              {liked ? "いいね済み" : "いいね"}
-              {term.likedBy.length > 0 && (
-                <span className="font-semibold">{term.likedBy.length}</span>
-              )}
-            </button>
-          </form>
+          <LikeButton termId={term.id} likedBy={term.likedBy} />
         </div>
 
         {term.comments.length === 0 ? (
@@ -375,18 +357,11 @@ export default async function TermDetailPage({
                   <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
                     {c.text}
                   </p>
-                  {c.by === user && (
-                    <form action={deleteCommentAction} className="mt-1.5">
-                      <input type="hidden" name="id" value={term.id} />
-                      <input type="hidden" name="commentId" value={c.id} />
-                      <button
-                        type="submit"
-                        className="text-xs text-muted-foreground hover:text-destructive hover:underline"
-                      >
-                        削除
-                      </button>
-                    </form>
-                  )}
+                  <CommentDeleteButton
+                    termId={term.id}
+                    commentId={c.id}
+                    commentBy={c.by}
+                  />
                 </li>
               );
             })}

@@ -5,6 +5,7 @@
 import { useActionState } from "react";
 import { createRequestAction, type RequestFormState } from "@/app/actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { MeField } from "@/components/MeField";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 
@@ -16,6 +17,7 @@ export function RequestForm() {
 
   return (
     <form action={formAction}>
+      <MeField />
       <Card className="flex flex-col gap-4 p-6">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">知りたい用語</span>

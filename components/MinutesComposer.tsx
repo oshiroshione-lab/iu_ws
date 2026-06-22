@@ -21,6 +21,8 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { SubmitButton } from "@/components/SubmitButton";
+import { MeField } from "@/components/MeField";
+import { useMe } from "@/components/MeProvider";
 import { buttonClasses } from "@/components/ui/Button";
 import { MicIcon, StopIcon } from "@/components/ui/icons";
 
@@ -51,6 +53,7 @@ export function MinutesComposer({ canTranscribe = true }: { canTranscribe?: bool
     createMinuteAction,
     {},
   );
+  const { me } = useMe();
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -262,6 +265,7 @@ export function MinutesComposer({ canTranscribe = true }: { canTranscribe?: bool
     const fd = new FormData();
     fd.set("title", title.trim() || "議事録");
     fd.set("body", finalBody);
+    fd.set("by", me.trim() || "ゲスト");
     formAction(fd);
   }
 
@@ -384,6 +388,7 @@ export function MinutesComposer({ canTranscribe = true }: { canTranscribe?: bool
 
       {/* ② タイトル・本文を整えて保存 */}
       <form action={formAction}>
+        <MeField />
         <Card className="flex flex-col gap-4 p-6">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">タイトル</span>

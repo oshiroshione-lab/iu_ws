@@ -1,62 +1,28 @@
-// ログイン（認証）の仮実装。
+// 「誰が操作したか（名前）」の扱い。
 //
-// 暫定対応: いまは「名前＋合言葉」を確認して、合っていればクッキーに名前を保存する
-//   だけの簡単な入口。DBや本格的な認証（Supabase Auth 等）が決まるまでのつなぎ。
-//   ※ クッキーに署名はしていないので、強いセキュリティではない。社内3人用の
-//     最小限のゲートとして使い、本番前に Supabase Auth などへ差し替える（TODO）。
+// 変更（2026-06-22）: ログイン（入口の壁）を廃止した。
+//   理由: プラットフォーム上で別ドメインの枠(iframe)に埋め込むと、ログイン用クッキーが
+//   「第三者クッキー」としてブラウザにブロックされ、名前が保存できずログインがループしたため。
+//   いまは名前を「ブラウザ(localStorage)」に持ち、登録・いいね・コメントなどの操作のたびに
+//   フォームの隠しフィールド "by" でサーバへ渡す（components/MeField.tsx が入れる）。
+//   → クッキーに頼らないので、埋め込み(iframe)でも確実に動く。
+//
+// requireUser / getCurrentUser は「壁」をやめたので、もう何もしない（互換のため残す）。
 
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { ALLOWED_MEMBERS, ACCESS_CODE } from "@/lib/config";
+const DEFAULT_ACTOR = "ゲスト";
 
-const COOKIE_NAME = "iukw_user";
-const THIRTY_DAYS = 60 * 60 * 24 * 30;
-
-/** いまログインしている人の名前を返す。未ログインなら null */
-export async function getCurrentUser(): Promise<string | null> {
-  const store = await cookies();
-  const name = store.get(COOKIE_NAME)?.value?.trim();
-  return name ? name : null;
+/** フォームの隠しフィールド "by"（MeField が入れる）から操作者名を取り出す。空なら「ゲスト」。 */
+export function actorFrom(formData: FormData): string {
+  const v = String(formData.get("by") ?? "").trim();
+  return v || DEFAULT_ACTOR;
 }
 
-/** ログイン必須のページで使う。未ログインなら /login へ飛ばす */
+/** 旧ログインの名残。壁は廃止したので、もう飛ばさない（呼ばれても素通り）。 */
 export async function requireUser(): Promise<string> {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  return user;
+  return DEFAULT_ACTOR;
 }
 
-export type LoginResult = { ok: true } | { ok: false; message: string };
-
-/**
- * ログインを試みる。成功ならクッキーに名前を保存して { ok: true }。
- * Server Action / Route Handler の中からのみ呼べる（クッキーを書き込むため）。
- */
-export async function tryLogin(name: string, code: string): Promise<LoginResult> {
-  const trimmed = name.trim();
-  if (!trimmed) {
-    return { ok: false, message: "名前を入力してください" };
-  }
-  // メンバー名が設定されていれば、その3人だけに限定する
-  if (ALLOWED_MEMBERS.length > 0 && !ALLOWED_MEMBERS.includes(trimmed)) {
-    return { ok: false, message: "このアプリは登録されたメンバーだけが使えます" };
-  }
-  // 合言葉が設定されていれば、一致を確認する
-  if (ACCESS_CODE && code.trim() !== ACCESS_CODE) {
-    return { ok: false, message: "合言葉がちがいます" };
-  }
-  const store = await cookies();
-  store.set(COOKIE_NAME, trimmed, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: THIRTY_DAYS,
-  });
-  return { ok: true };
-}
-
-/** ログアウト（クッキーを消す） */
-export async function logout(): Promise<void> {
-  const store = await cookies();
-  store.delete(COOKIE_NAME);
+/** 旧ログインの名残。クッキーは使わないので常に null（互換のため残す）。 */
+export async function getCurrentUser(): Promise<string | null> {
+  return null;
 }

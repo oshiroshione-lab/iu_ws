@@ -19,6 +19,7 @@ import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Textarea";
 import { Badge } from "@/components/ui/Badge";
 import { SubmitButton } from "@/components/SubmitButton";
+import { MeField } from "@/components/MeField";
 import { buttonClasses } from "@/components/ui/Button";
 import { SparklesIcon } from "@/components/ui/icons";
 
@@ -122,6 +123,7 @@ export function TermExtractor({ defaultText = "" }: { defaultText?: string }) {
             </p>
           ) : (
             <form action={createAction} className="flex flex-col gap-4">
+              <MeField />
               {/* 選んだ語をフォーム送信するための隠しフィールド */}
               {selected.map((w) => (
                 <input key={w} type="hidden" name="words" value={w} />

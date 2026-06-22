@@ -5,6 +5,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { addCommentAction, type FormState } from "@/app/actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { MeField } from "@/components/MeField";
 import { Textarea } from "@/components/ui/Textarea";
 
 export function CommentForm({ termId }: { termId: string }) {
@@ -22,6 +23,7 @@ export function CommentForm({ termId }: { termId: string }) {
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-2">
       <input type="hidden" name="id" value={termId} />
+      <MeField />
       <Textarea
         name="text"
         rows={3}

@@ -5,7 +5,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth";
+import { requireUser, actorFrom } from "@/lib/auth";
 import { minutesRepository } from "@/lib/store";
 import {
   transcribeAudio,
@@ -103,7 +103,7 @@ export async function createMinuteAction(
   _prev: MinuteFormState,
   formData: FormData,
 ): Promise<MinuteFormState> {
-  const user = await requireUser();
+  const user = actorFrom(formData);
 
   const titleCheck = validateMinuteTitle(String(formData.get("title") ?? ""));
   if (!titleCheck.ok) return { error: titleCheck.message };
