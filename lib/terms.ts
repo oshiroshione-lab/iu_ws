@@ -170,16 +170,16 @@ export function toViewMode(value: string | undefined): ViewMode {
 /** グリッド表示で横に並べる枚数（列数）。2〜6から選べる（少ないほどカードが大きい）。 */
 export type GridCols = 2 | 3 | 4 | 5 | 6;
 
-/** 列数の既定。これまでの見た目を変えないよう 3 にしている。 */
-export const DEFAULT_GRID_COLS: GridCols = 3;
+/** 列数の既定。たくさん並べて見渡せるよう 6 にしている。 */
+export const DEFAULT_GRID_COLS: GridCols = 6;
 
 /** 選べる列数の一覧（小さい順）。先頭が最小・末尾が最大。 */
 export const GRID_COLS_OPTIONS: GridCols[] = [2, 3, 4, 5, 6];
 
-/** 文字列を安全に GridCols へ。2〜6の範囲外や不明な値は既定（3）にする。 */
+/** 文字列を安全に GridCols へ。2〜6の範囲外や不明な値は既定（6）にする。 */
 export function toGridCols(value: string | undefined): GridCols {
   const n = Number(value);
-  return n === 2 || n === 4 || n === 5 || n === 6 ? n : DEFAULT_GRID_COLS;
+  return GRID_COLS_OPTIONS.includes(n as GridCols) ? (n as GridCols) : DEFAULT_GRID_COLS;
 }
 
 /** 用語名 → 用語 の早引き表（大文字小文字を無視）。関連ワードの相互リンクに使う */

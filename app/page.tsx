@@ -98,7 +98,7 @@ export default async function HomePage({
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold tracking-tight">用語一覧</h1>
         <p className="text-sm text-muted-foreground">
-          チーム3人で共有している「私たちの辞書」です。全{all.length}件。
+          チーム3人で共有している「IT用語集」です。全{all.length}件。
         </p>
       </header>
 

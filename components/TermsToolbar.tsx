@@ -100,7 +100,7 @@ export function TermsToolbar({ current }: { current: Params }) {
   const toggleBtn =
     "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors";
 
-  // 列数 n に切り替えるリンク先（既定の3はURLから省いて短くする）。
+  // 列数 n に切り替えるリンク先（既定の6はURLから省いて短くする）。
   const colsHref = (n: number) =>
     "/" +
     buildQuery(current, { cols: n === DEFAULT_GRID_COLS ? undefined : String(n) });

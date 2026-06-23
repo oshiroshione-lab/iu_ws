@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/icons";
 
 export const metadata: Metadata = {
-  title: "私たちの辞書 — iUナレッジWS",
+  title: "IT用語集",
   description: "iUインターン3人で専門用語を共有する辞書アプリ",
 };
 
@@ -31,7 +31,8 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   // テーマは cookie で覚えておく。ここでクラスを決めるので、開いた瞬間のちらつきが出ない。
-  const isDark = cookieStore.get("theme")?.value === "dark";
+  // 既定はダークモード。自分で「ライト」に切り替えたときだけ明るくする。
+  const isDark = cookieStore.get("theme")?.value !== "light";
   // 見た目のプリセット（中央寄せのクラシック／横幅いっぱいのワイド）も cookie で覚える。
   const design = toDesignPreset(cookieStore.get("design")?.value);
   // クラシックは中央寄せ（max-w-5xl）、ワイドは横幅いっぱい＋画面幅に応じた余白。
@@ -57,7 +58,7 @@ export default async function RootLayout({
               <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
                 <BookIcon className="h-4 w-4" />
               </span>
-              私たちの辞書
+              IT用語集
             </Link>
 
             <nav className="flex items-center gap-1 sm:gap-2">
@@ -101,7 +102,7 @@ export default async function RootLayout({
         </main>
 
         <footer className="border-t py-5 text-center text-xs text-muted-foreground">
-          iUナレッジWS — チーム3人の辞書
+          IT用語集 — チーム3人の辞書
         </footer>
 
         {/* 裏で作っているイラストの完成を通知する */}
