@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT用語集 — 解説書（概要・仕組み・アーキテクチャ）</title>
+<style>
+  :root {
+    --ink: #16231f;
+    --sub: #5b6b66;
+    --bg: #eef1ed;
+    --card: #ffffff;
+    --green: #0f5746;       /* 意味色: 自前/確定（アプリのコード・取り決め）＝中核 */
+    --green-l: #e3efe9;
+    --accent: #c8632c;      /* 意味色: 費用/外部AI/不確実（OpenAI・TBD） */
+    --accent-l: #fdeee2;
+    --blue: #1e5f8e;        /* 意味色: 入力・外部インフラ（ブラウザ・Cloud Run・DB・Storage） */
+    --blue-l: #e4eef6;
+    --line: #dde2da;
+    --mono: "SFMono-Regular", "Consolas", "Menlo", "Courier New", monospace;
+    /* 署名: このアプリ固有の「固定タグ8分野」の色帯（AI/Web/DB/NW/セキュリティ/インフラ/開発/その他） */
+    --band: linear-gradient(90deg,#6366f1 0 12.5%,#2563eb 0 25%,#0891b2 0 37.5%,#0f9d58 0 50%,#b0392b 0 62.5%,#c8632c 0 75%,#9333ea 0 87.5%,#6b7280 0 100%);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.9;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 60px 0; }
+  section:nth-of-type(even) { background: #f6f8f5; }
+
+  .color-band { height: 8px; background: var(--band); }
+  .topband { height: 6px; background: var(--band); }
+  .hero .color-band { height: 7px; width: 300px; max-width: 70%; border-radius: 999px; margin: 0 0 22px; }
+
+  .rules { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 4px; }
+  .rule { font-family: var(--mono); font-size: 13.5px; line-height: 1.5; background: #10261f; color: #8fe6c6; padding: 5px 12px; border-radius: 7px; }
+
+  /* ---------- ヒーロー ---------- */
+  .hero { background: linear-gradient(160deg, #0f5746 0%, #14735c 60%, #1d8a6e 100%); color: #fff; padding: 76px 0 60px; }
+  .hero .tag { display: inline-block; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.4); border-radius: 999px; padding: 4px 18px; font-size: 14px; letter-spacing: .1em; margin-bottom: 20px; }
+  .hero h1 { font-size: 44px; font-weight: 900; line-height: 1.4; }
+  .hero p.lead { font-size: 19px; margin-top: 18px; opacity: .92; max-width: 760px; }
+  .hero-stats { display: flex; gap: 16px; margin-top: 36px; flex-wrap: wrap; }
+  .hero-stat { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); border-radius: 14px; padding: 14px 22px; min-width: 180px; }
+  .hero-stat b { display: block; font-size: 26px; }
+  .hero-stat span { font-size: 13px; opacity: .85; }
+
+  /* ---------- 見出し ---------- */
+  h2 { font-size: 29px; font-weight: 900; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+  h2 .num { background: var(--green); color: #fff; border-radius: 10px; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .sec-lead { color: var(--ink); font-size: 16.5px; font-weight: 600; line-height: 1.8; margin: 4px 0 30px; padding: 2px 0 2px 16px; border-left: 4px solid var(--green); max-width: 840px; }
+  h3 { font-size: 19px; margin: 34px 0 10px; color: var(--green); }
+  section .wrap > p { max-width: 840px; }
+
+  /* ---------- カード ---------- */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(40,60,50,.05); }
+  .card h4 { font-size: 16px; margin-bottom: 6px; }
+  .card p { font-size: 14px; color: var(--sub); }
+  .card .icon { font-size: 30px; display: block; margin-bottom: 8px; }
+  .card .badge { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 1px 8px; margin-top: 8px; }
+  .badge-must { background: var(--green-l); color: var(--green); }
+  .badge-should { background: var(--blue-l); color: var(--blue); }
+  .badge-could { background: #f0eee6; color: var(--sub); }
+
+  /* ---------- タイムライン ---------- */
+  .timeline { list-style: none; margin-top: 8px; }
+  .timeline li { position: relative; padding: 0 0 26px 36px; border-left: 3px solid var(--green-l); margin-left: 10px; }
+  .timeline li:last-child { border-left-color: transparent; padding-bottom: 0; }
+  .timeline li::before { content: ""; position: absolute; left: -11.5px; top: 4px; width: 20px; height: 20px; border-radius: 50%; background: var(--green); border: 4px solid var(--green-l); }
+  .timeline b { display: block; font-size: 17px; }
+  .timeline p { font-size: 14.5px; color: var(--sub); }
+
+  /* ---------- 図版 ---------- */
+  .fig { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; margin: 28px 0; }
+  .fig svg { width: 100%; height: auto; display: block; }
+  .fig figcaption { font-size: 13.5px; color: var(--sub); margin-top: 14px; text-align: center; line-height: 1.7; }
+
+  /* ---------- 表 ---------- */
+  .tablewrap { overflow-x: auto; margin: 8px 0; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; font-size: 14.5px; box-shadow: 0 1px 4px rgba(40,60,50,.05); }
+  th { background: var(--green); color: #fff; padding: 11px 16px; text-align: left; font-weight: 700; }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.7; }
+  tr:last-child td { border-bottom: none; }
+  table tr:nth-child(even) td { background: #faf8f0; }
+  td.k { font-weight: 700; white-space: nowrap; color: var(--ink); }
+
+  /* ---------- 注記(橙)＝書き手の補足・主張 ---------- */
+  .note { background: var(--accent-l); border-left: 5px solid var(--accent); border-radius: 0 10px 10px 0; padding: 14px 18px; font-size: 14.5px; margin: 18px 0; }
+  .note b { color: var(--accent); }
+
+  /* ---------- 裏付け(青)＝外部の根拠 ---------- */
+  .evidence { background: var(--blue-l); border-left: 5px solid var(--blue); border-radius: 0 10px 10px 0; padding: 14px 18px; font-size: 14.5px; margin: 18px 0; }
+  .evidence b { color: var(--blue); }
+
+  /* ---------- 用語ミニ辞典・凡例 ---------- */
+  .mini { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 8px 22px; }
+  .mini dl { display: grid; grid-template-columns: 160px 1fr; gap: 0; }
+  .mini dt { font-weight: 700; padding: 11px 0; border-bottom: 1px solid var(--line); color: var(--green); }
+  .mini dd { padding: 11px 0; border-bottom: 1px solid var(--line); color: var(--sub); font-size: 14.5px; }
+  .mini dl > dt:last-of-type, .mini dl > dd:last-of-type { border-bottom: none; }
+  @media (max-width: 600px) { .mini dl { grid-template-columns: 1fr; } .mini dt { border-bottom: none; padding-bottom: 0; } }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 18px 0 2px; }
+  .legend .item { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; font-size: 13.5px; }
+  .legend .dot { width: 16px; height: 16px; border-radius: 5px; flex-shrink: 0; }
+
+  footer { background: var(--ink); color: #cfd8d3; text-align: center; padding: 28px 0; font-size: 13px; line-height: 1.9; }
+  footer a { color: #9fd9c4; }
+
+  /* 目次 */
+  .toc-section { padding: 40px 0 16px; }
+  .toc-title { font-size: 22px; font-weight: 900; margin-bottom: 16px; color: var(--ink); }
+  .toc { list-style: none; counter-reset: toc; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 24px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 28px; box-shadow: 0 2px 8px rgba(40,60,50,.05); }
+  .toc li { counter-increment: toc; }
+  .toc a { display: flex; align-items: baseline; gap: 10px; color: var(--ink); text-decoration: none; font-size: 15px; padding: 6px 0; border-bottom: 1px solid #f0ecdd; }
+  .toc a::before { content: counter(toc); flex-shrink: 0; background: var(--green); color: #fff; border-radius: 7px; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+  .toc a:hover { color: var(--green); }
+  @media (max-width: 680px) { .toc { grid-template-columns: 1fr; } }
+
+  @media print {
+    section { padding: 26px 0; break-inside: avoid; }
+    .hero { padding: 40px 0; }
+    .toc a { border-bottom: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topband"></div>
+
+<!-- ======================= ヒーロー ======================= -->
+<div class="hero">
+  <div class="wrap">
+    <div class="color-band"></div>
+    <span class="tag">概要・仕組み・アーキテクチャ解説 / 2026-06-24</span>
+    <h1>IT用語集<br>用語名を入れるだけで、AIが「辞書の1ページ」を作る</h1>
+    <p class="lead">インターン3人チームの社内辞書。覚えたいIT用語を入力すると、AIが<b>比喩を使わない説明文・図解イラスト・関連ワード・分野タグ</b>を自動で作り、3人で共有・確認・コメントしながら育てる。議事録づくり（録音→文字起こし→用語抽出）も同じアプリの中でできる。この資料は、作者自身がこのアプリの仕組みを正しく理解し、人に説明できるようになるためのもの。</p>
+    <div class="hero-stats">
+      <div class="hero-stat"><b>51 件</b><span>登録済みの用語（手元データ）</span></div>
+      <div class="hero-stat"><b>56 枚</b><span>生成済みイラスト（手元データ）</span></div>
+      <div class="hero-stat"><b>72 件</b><span>自動テストすべてパス</span></div>
+      <div class="hero-stat"><b>公開済み</b><span>Cloud Run（東京）で稼働</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= 色の凡例 ======================= -->
+<section>
+  <div class="wrap">
+    <div class="color-band" style="width:300px;max-width:70%;height:7px;border-radius:999px;margin-bottom:18px"></div>
+    <h2 style="color:var(--green)">この資料の読み方（色の意味）</h2>
+    <p class="sec-lead">図と文の色は「意味」を運ぶ。以下の3色を最後まで同じ意味で使う。上の8色帯は、このアプリの固定タグ8分野（AI / Web / データベース / ネットワーク / セキュリティ / インフラ・クラウド / 開発・設計 / その他）を表す目印。</p>
+    <div class="legend">
+      <div class="item"><span class="dot" style="background:var(--green)"></span><b>緑</b>＝自前・確定（アプリのコード／設計の取り決め）＝中核</div>
+      <div class="item"><span class="dot" style="background:var(--accent)"></span><b>橙</b>＝費用・外部AI・未確定（OpenAI／TBD）</div>
+      <div class="item"><span class="dot" style="background:var(--blue)"></span><b>青</b>＝入力・外部インフラ（ブラウザ／Cloud Run／DB／Storage）</div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 目次 ======================= -->
+<section class="toc-section">
+  <div class="wrap">
+    <h2 class="toc-title">目次</h2>
+    <ol class="toc">
+      <li><a href="#s1">これは何か（一番の主題）</a></li>
+      <li><a href="#s2">できること（機能の一覧）</a></li>
+      <li><a href="#s3">用語を1件登録すると、裏で何が起きるか</a></li>
+      <li><a href="#s4">議事録のしくみ（録音→整える→用語抽出）</a></li>
+      <li><a href="#s5">アーキテクチャ構成図（どこで何が動くか）</a></li>
+      <li><a href="#s6">差し替えできる設計（保存・画像・認証・AI）</a></li>
+      <li><a href="#s7">データの関係（ER図）</a></li>
+      <li><a href="#s8">料金の目安と、今できていること</a></li>
+      <li><a href="#s9">これからの宿題（未確定＝TBD）</a></li>
+      <li><a href="#s10">用語ミニ辞典</a></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ======================= 1. これは何か ======================= -->
+<section>
+  <div class="wrap">
+    <h2 id="s1"><span class="num">1</span>これは何か（一番の主題）</h2>
+    <p class="sec-lead">「用語名を入れるだけで、比喩を使わないわかりやすい1ページ（説明・図解・関連語・タグ）がAIで自動的にできあがる」——これがこのアプリの核。3人の小さなチームが、学んだIT用語を出し合って育てる“私たちの辞書”。</p>
+
+    <h3>誰のための、何のアプリか</h3>
+    <p>iU のインターン3人チームが、新しく学んだ専門用語を共有・保存するための社内ツール。一般公開や外部登録は作らない（内輪利用が前提）。PCのブラウザで使う。AIの役割は「調べる手間をなくし、初心者にも分かる説明をそろえる」こと。</p>
+
+    <h3>2つの柱</h3>
+    <div class="cards">
+      <div class="card"><span class="icon">📖</span><h4>用語辞典</h4><p>用語名を入力 → AIが説明・イラスト・関連ワード・タグを自動生成。一覧・検索・編集・いいね・コメント・確認済みバッジで、3人で育てる。</p></div>
+      <div class="card"><span class="icon">🎙️</span><h4>議事録</h4><p>ブラウザのマイクでリアルタイム文字起こし → AIで要約・決定事項・ToDoに整える → 本文から専門用語を抜き出して辞書に登録。</p></div>
+    </div>
+
+    <div class="note"><b>中核ルール（絶対）:</b> AIが作る説明文には<b>比喩・たとえ話を使わない</b>。さらに「キャッシュ」のように他業界でも使う言葉でも、必ずIT・ソフトウェア分野の意味で説明する。これは仕様の中心で、AIへの指示文（<code>lib/ai.ts</code>）に必ず入っている。</div>
+    <div class="note"><b>失敗を握りつぶさない:</b> イラスト生成に失敗したら、テキストだけ表示して「画像を生成できませんでした（後でやり直せます）」と出す。関連ワードが0件でもエラーにせず「見つかりませんでした」と表示する。</div>
+  </div>
+</section>
+
+<!-- ======================= 2. できること ======================= -->
+<section>
+  <div class="wrap">
+    <h2 id="s2"><span class="num">2</span>できること（機能の一覧）</h2>
+    <p class="sec-lead">要件定義書の機能（F-01〜F-08）はひと通り動く状態。さらに、リサーチを重ねて「3人で育てる」ための機能（確認済み・いいね・コメント・タグ自動付与・用語リクエスト・つながり表示・議事録）を足してきた。</p>
+
+    <h3>要件定義書の機能（F-01〜F-08）</h3>
+    <div class="cards">
+      <div class="card"><span class="icon">📝</span><h4>F-01 用語の登録</h4><p>用語名を入力して登録。空入力や重複はちゃんと弾く。<span class="badge badge-must">Must</span></p></div>
+      <div class="card"><span class="icon">🤖</span><h4>F-02 AI自動リサーチ</h4><p>比喩なしの説明文をAIが生成。<span class="badge badge-must">Must</span></p></div>
+      <div class="card"><span class="icon">🖼️</span><h4>F-03 イラスト生成</h4><p>用語を“絵で説明する図解”を生成して表示。<span class="badge badge-must">Must</span></p></div>
+      <div class="card"><span class="icon">🔗</span><h4>F-04 関連ワード提案</h4><p>セットで覚えると役立つ語を最大6個。<span class="badge badge-must">Must</span></p></div>
+      <div class="card"><span class="icon">📚</span><h4>F-05 一覧の閲覧</h4><p>登録済みを3人で共有。既定は6列・ダークモード。<span class="badge badge-must">Must</span></p></div>
+      <div class="card"><span class="icon">🔎</span><h4>F-06 検索</h4><p>表記ゆれ（ひらがな/カタカナ・全角/半角）も吸収。<span class="badge badge-should">Should</span></p></div>
+      <div class="card"><span class="icon">✏️</span><h4>F-07 編集・削除</h4><p>用語名・説明・関連ワード・タグを手で直せる。<span class="badge badge-should">Should</span></p></div>
+      <div class="card"><span class="icon">➕</span><h4>F-08 関連語から登録</h4><p>関連ワードや用語リクエストから新規登録へ。<span class="badge badge-could">Could</span></p></div>
+    </div>
+
+    <h3>「3人で育てる」ために足した機能</h3>
+    <div class="cards">
+      <div class="card"><span class="icon">✓</span><h4>確認済みバッジ</h4><p>AIの説明は間違うこともあるので、人が読んで「確認した」を押せる。編集すると確認は自動で外れる。</p></div>
+      <div class="card"><span class="icon">👍</span><h4>いいね・コメント</h4><p>説明を人の手で補足・改善。誰がいいねしたかも個人別に持つ。</p></div>
+      <div class="card"><span class="icon">🏷️</span><h4>タグ自動付与</h4><p>固定の8分野からAIが1つ選んで自動でタグ付け。絞り込みが安定する。</p></div>
+      <div class="card"><span class="icon">🙋</span><h4>用語リクエスト</h4><p>「これを知りたい」をためる待ち行列。誰かが登録すると自動で消える。</p></div>
+      <div class="card"><span class="icon">🕸️</span><h4>つながり表示</h4><p>説明文中の用語を自動リンク。共通の関連語でつながる“兄弟”用語も表示。</p></div>
+      <div class="card"><span class="icon">🥁</span><h4>表示の切替</h4><p>グリッド／縦・横の積層（太鼓の達人ふう）と、列数（2〜6）・並び替え。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 3. 用語登録の流れ ======================= -->
+<section>
+  <div class="wrap">
+    <h2 id="s3"><span class="num">3</span>用語を1件登録すると、裏で何が起きるか</h2>
+    <p class="sec-lead">登録ボタンを押すと、まず「説明文」までを作って<b>すぐ用語ページへ進む</b>。時間のかかるイラストは“裏で”作り、完成したら画面の右下に通知する。だから待たされない。処理の入口はすべて <code>app/actions.ts</code> の Server Action。</p>
+
+    <figure class="fig">
+      <svg viewBox="0 0 900 320" font-family="sans-serif">
+        <defs>
+          <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L8,4.5 L0,9 z" fill="#0f5746"/></marker>
+          <marker id="aro" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L8,4.5 L0,9 z" fill="#c8632c"/></marker>
+        </defs>
+        <!-- 上段: メインの流れ -->
+        <rect x="15"  y="30" width="150" height="74" rx="12" fill="#e4eef6" stroke="#1e5f8e" stroke-width="2"/><text x="90"  y="62" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e5f8e">① 用語名を入力</text><text x="90" y="84" text-anchor="middle" font-size="11.5" fill="#33536e">ブラウザ</text>
+        <rect x="193" y="30" width="150" height="74" rx="12" fill="#e3efe9" stroke="#0f5746" stroke-width="2"/><text x="268" y="56" text-anchor="middle" font-size="14" font-weight="bold" fill="#0f5746">② 重複チェック</text><text x="268" y="78" text-anchor="middle" font-size="11.5" fill="#456">既出ならAIを呼ばず</text><text x="268" y="93" text-anchor="middle" font-size="11.5" fill="#456">その用語へ案内</text>
+        <rect x="371" y="30" width="158" height="74" rx="12" fill="#fdeee2" stroke="#c8632c" stroke-width="2"/><text x="450" y="56" text-anchor="middle" font-size="14" font-weight="bold" fill="#c8632c">③ AIで説明生成</text><text x="450" y="78" text-anchor="middle" font-size="11.5" fill="#7a4520">比喩なし＋関連語</text><text x="450" y="93" text-anchor="middle" font-size="11.5" fill="#7a4520">＋タグ自動分類</text>
+        <rect x="557" y="30" width="150" height="74" rx="12" fill="#e3efe9" stroke="#0f5746" stroke-width="2"/><text x="632" y="56" text-anchor="middle" font-size="14" font-weight="bold" fill="#0f5746">④ 保存</text><text x="632" y="78" text-anchor="middle" font-size="11.5" fill="#456">image_status</text><text x="632" y="93" text-anchor="middle" font-size="11.5" fill="#456">= generating</text>
+        <rect x="735" y="30" width="150" height="74" rx="12" fill="#e4eef6" stroke="#1e5f8e" stroke-width="2"/><text x="810" y="62" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e5f8e">⑤ 用語ページへ</text><text x="810" y="84" text-anchor="middle" font-size="11.5" fill="#33536e">すぐ移動（待たない）</text>
+        <line x1="167" y1="67" x2="191" y2="67" stroke="#0f5746" stroke-width="3" marker-end="url(#ar)"/>
+        <line x1="345" y1="67" x2="369" y2="67" stroke="#0f5746" stroke-width="3" marker-end="url(#ar)"/>
+        <line x1="531" y1="67" x2="555" y2="67" stroke="#0f5746" stroke-width="3" marker-end="url(#ar)"/>
+        <line x1="709" y1="67" x2="733" y2="67" stroke="#0f5746" stroke-width="3" marker-end="url(#ar)"/>
+        <!-- 下段: 裏で（after） -->
+        <line x1="632" y1="104" x2="632" y2="150" stroke="#c8632c" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#aro)"/>
+        <text x="648" y="132" font-size="11.5" fill="#c8632c">レスポンス後に裏で（after）</text>
+        <rect x="120" y="158" width="220" height="80" rx="12" fill="#fdeee2" stroke="#c8632c" stroke-width="2"/><text x="230" y="186" text-anchor="middle" font-size="14" font-weight="bold" fill="#c8632c">⑥ イラストを裏で生成</text><text x="230" y="208" text-anchor="middle" font-size="11.5" fill="#7a4520">AIで図解を作成 →</text><text x="230" y="223" text-anchor="middle" font-size="11.5" fill="#7a4520">Cloud Storage に保存</text>
+        <rect x="400" y="158" width="220" height="80" rx="12" fill="#e3efe9" stroke="#0f5746" stroke-width="2"/><text x="510" y="186" text-anchor="middle" font-size="14" font-weight="bold" fill="#0f5746">⑦ 状態を更新</text><text x="510" y="208" text-anchor="middle" font-size="11.5" fill="#456">image_status = ok / failed</text><text x="510" y="223" text-anchor="middle" font-size="11.5" fill="#456">一覧・詳細を再表示</text>
+        <rect x="680" y="158" width="205" height="80" rx="12" fill="#e4eef6" stroke="#1e5f8e" stroke-width="2"/><text x="782" y="186" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e5f8e">⑧ 右下に通知</text><text x="782" y="208" text-anchor="middle" font-size="11.5" fill="#33536e">「○○のイラストが</text><text x="782" y="223" text-anchor="middle" font-size="11.5" fill="#33536e">できました」</text>
+        <line x1="340" y1="198" x2="398" y2="198" stroke="#c8632c" stroke-width="3" marker-end="url(#aro)"/>
+        <line x1="620" y1="198" x2="678" y2="198" stroke="#0f5746" stroke-width="3" marker-end="url(#ar)"/>
+        <text x="632" y="276" text-anchor="middle" font-size="12" fill="#5b6b66">⑥〜⑧は Next.js の after（レスポンスを返した後の処理）で実行。失敗しても登録は成功扱い。</text>
+      </svg>
+      <figcaption>図1: 用語登録の流れ。①⑤⑧＝ブラウザ（青）、②④⑦＝アプリ自前（緑）、③⑥＝OpenAI頼み（橙・費用）。説明までで即移動し、画像は裏で作る。</figcaption>
+    </figure>
+
+    <div class="evidence"><b>裏付け（コードと一致）:</b> <code>app/actions.ts</code> の <code>createTermAction</code> が、重複チェック → <code>researchTerm</code>（説明・関連語）→ <code>chooseTag</code>（タグ）→ 保存 → <code>redirect</code> の順に動き、イラストは <code>after(...)</code> の中で <code>generateIllustrationBase64</code> → <code>saveGeneratedImage</code> を実行している。</div>
+
+    <h3>イラストは“雰囲気の絵”ではなく“図解”</h3>
+    <p>画像の役割は「その用語を絵で説明する」こと。そこで二段構えにしている。まず安いテキストAIに「概念を図解で説明する絵の設計（英語）」を書かせ、その設計を画像AIに渡す。画像AIは文字を崩しやすいので、長い文章は入れず、矢印・アイコン・箱（入力→処理→出力 など）で意味を伝えるよう指定している。</p>
+  </div>
+</section>
+
+<!-- ======================= 4. 議事録のしくみ ======================= -->
+<section>
+  <div class="wrap">
+    <h2 id="s4"><span class="num">4</span>議事録のしくみ（録音→整える→用語抽出）</h2>
+    <p class="sec-lead">もう一つの柱。マイクで話すとその場で文字が出る（リアルタイム文字起こし）。本文ができたらAIで要約・決定事項・ToDoに整え、さらに本文から専門用語を抜き出して辞書に登録できる。</p>
+
+    <figure class="fig">
+      <svg viewBox="0 0 900 170" font-family="sans-serif">
+        <defs><marker id="ar4" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L8,4.5 L0,9 z" fill="#0f5746"/></marker></defs>
+        <rect x="10"  y="46" width="160" height="74" rx="12" fill="#e4eef6" stroke="#1e5f8e" stroke-width="2"/><text x="90"  y="74" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#1e5f8e">① 録音して開始</text><text x="90" y="96" text-anchor="middle" font-size="11" fill="#33536e">ブラウザのマイク</text>
+        <rect x="194" y="46" width="170" height="74" rx="12" fill="#fdeee2" stroke="#c8632c" stroke-width="2"/><text x="279" y="69" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#c8632c">② リアルタイム</text><text x="279" y="86" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#c8632c">文字起こし</text><text x="279" y="104" text-anchor="middle" font-size="10.5" fill="#7a4520">WebRTCでOpenAIに直結</text>
+        <rect x="388" y="46" width="160" height="74" rx="12" fill="#e3efe9" stroke="#0f5746" stroke-width="2"/><text x="468" y="74" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f5746">③ 保存</text><text x="468" y="96" text-anchor="middle" font-size="11" fill="#456">タイトル・本文ほか</text>
+        <rect x="572" y="46" width="160" height="74" rx="12" fill="#fdeee2" stroke="#c8632c" stroke-width="2"/><text x="652" y="69" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#c8632c">④ AIで整える</text><text x="652" y="90" text-anchor="middle" font-size="11" fill="#7a4520">要約・決定事項</text><text x="652" y="105" text-anchor="middle" font-size="11" fill="#7a4520">・ToDo を生成</text>
+        <rect x="756" y="46" width="134" height="74" rx="12" fill="#fdeee2" stroke="#c8632c" stroke-width="2"/><text x="823" y="69" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#c8632c">⑤ 用語抽出</text><text x="823" y="90" text-anchor="middle" font-size="11" fill="#7a4520">候補→選んで</text><text x="823" y="105" text-anchor="middle" font-size="11" fill="#7a4520">辞書へ登録</text>
+        <line x1="172" y1="83" x2="192" y2="83" stroke="#0f5746" stroke-width="3" marker-end="url(#ar4)"/>
+        <line x1="366" y1="83" x2="386" y2="83" stroke="#0f5746" stroke-width="3" marker-end="url(#ar4)"/>
+        <line x1="550" y1="83" x2="570" y2="83" stroke="#0f5746" stroke-width="3" marker-end="url(#ar4)"/>
+        <line x1="734" y1="83" x2="754" y2="83" stroke="#0f5746" stroke-width="3" marker-end="url(#ar4)"/>
+      </svg>
+      <figcaption>図2: 議事録の流れ。橙（②④⑤）はOpenAIを使う有料処理。②は安全のため一時トークンを使い、本物のAPIキーはサーバー側に置いたままブラウザが直接つなぐ。</figcaption>
+    </figure>
+
+    <div class="note"><b>料金の配慮:</b> 用語抽出は2段階。まず「候補を挙げるだけ」（安いAI1回）→ 画面で選んだ分だけ説明を作って登録。要らない用語にAI費用を使わない。リアルタイム文字起こしは便利だが費用はやや高め、という点はメモしている。</div>
+  </div>
+</section>
+
+<!-- ======================= 5. アーキテクチャ構成図 ======================= -->
+<section>
+  <div class="wrap">
+    <h2 id="s5"><span class="num">5</span>アーキテクチャ構成図（どこで何が動くか）</h2>
+    <p class="sec-lead">中心は1つ＝Cloud Run 上の Next.js サーバー。ブラウザはこことやり取りし、サーバーが外部（OpenAI・PostgreSQL・Cloud Storage）をまとめて呼ぶ。<b>AIの鍵・DBの鍵はサーバー側だけ</b>に置く。</p>
+
+    <figure class="fig">
+      <svg viewBox="0 0 900 380" font-family="sans-serif">
+        <defs><marker id="aA" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L8,4.5 L0,9 z" fill="#5b6b66"/></marker></defs>
+        <!-- ブラウザ -->
+        <rect x="20" y="150" width="170" height="92" rx="14" fill="#e4eef6" stroke="#1e5f8e" stroke-width="2"/>
+        <text x="105" y="186" text-anchor="middle" font-size="16" font-weight="bold" fill="#1e5f8e">ブラウザ</text>
+        <text x="105" y="208" text-anchor="middle" font-size="11.5" fill="#33536e">用語入力・一覧・検索</text>
+        <text x="105" y="224" text-anchor="middle" font-size="11.5" fill="#33536e">議事録の録音</text>
+        <!-- 中核: Next.js on Cloud Run -->
+        <rect x="300" y="70" width="290" height="250" rx="16" fill="#e3efe9" stroke="#0f5746" stroke-width="2.5"/>
+        <rect x="300" y="70" width="290" height="36" rx="16" fill="#0f5746"/>
+        <text x="445" y="94" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">Next.js サーバー（Cloud Run・東京）</text>
+        <rect x="320" y="120" width="250" height="42" rx="9" fill="#fff" stroke="#0f5746"/><text x="445" y="146" text-anchor="middle" font-size="12.5" fill="#0f5746">画面・Server Actions（app/）</text>
+        <rect x="320" y="170" width="250" height="42" rx="9" fill="#fff" stroke="#0f5746"/><text x="445" y="196" text-anchor="middle" font-size="12.5" fill="#0f5746">lib/ai.ts（AIの窓口を集約）</text>
+        <rect x="320" y="220" width="250" height="42" rx="9" fill="#fff" stroke="#0f5746"/><text x="445" y="246" text-anchor="middle" font-size="12.5" fill="#0f5746">lib/store（保存層・差し替え可）</text>
+        <rect x="320" y="270" width="250" height="38" rx="9" fill="#fff" stroke="#0f5746"/><text x="445" y="294" text-anchor="middle" font-size="12.5" fill="#0f5746">lib/images（画像の出し入れ）</text>
+        <!-- 外部3つ -->
+        <rect x="690" y="70" width="195" height="74" rx="12" fill="#fdeee2" stroke="#c8632c" stroke-width="2"/><text x="787" y="100" text-anchor="middle" font-size="14.5" font-weight="bold" fill="#c8632c">OpenAI（有料）</text><text x="787" y="122" text-anchor="middle" font-size="11" fill="#7a4520">説明 / 画像 / 文字起こし</text>
+        <rect x="690" y="166" width="195" height="74" rx="12" fill="#e4eef6" stroke="#1e5f8e" stroke-width="2"/><text x="787" y="196" text-anchor="middle" font-size="14.5" font-weight="bold" fill="#1e5f8e">PostgreSQL</text><text x="787" y="218" text-anchor="middle" font-size="11" fill="#33536e">schema knowledge_ws</text>
+        <rect x="690" y="262" width="195" height="74" rx="12" fill="#e4eef6" stroke="#1e5f8e" stroke-width="2"/><text x="787" y="292" text-anchor="middle" font-size="14.5" font-weight="bold" fill="#1e5f8e">Cloud Storage</text><text x="787" y="314" text-anchor="middle" font-size="11" fill="#33536e">イラスト画像（バケット）</text>
+        <!-- 矢印 -->
+        <line x1="192" y1="188" x2="297" y2="180" stroke="#5b6b66" stroke-width="2.5" marker-end="url(#aA)"/>
+        <line x1="297" y1="205" x2="192" y2="212" stroke="#5b6b66" stroke-width="2.5" marker-end="url(#aA)"/>
+        <line x1="592" y1="120" x2="688" y2="107" stroke="#5b6b66" stroke-width="2.5" marker-end="url(#aA)"/>
+        <line x1="592" y1="200" x2="688" y2="200" stroke="#5b6b66" stroke-width="2.5" marker-end="url(#aA)"/>
+        <line x1="688" y1="210" x2="592" y2="210" stroke="#5b6b66" stroke-width="2.5" marker-end="url(#aA)"/>
+        <line x1="592" y1="288" x2="688" y2="295" stroke="#5b6b66" stroke-width="2.5" marker-end="url(#aA)"/>
+        <line x1="688" y1="305" x2="592" y2="298" stroke="#5b6b66" stroke-width="2.5" marker-end="url(#aA)"/>
+        <!-- ブラウザ→OpenAI 直結（リアルタイム） -->
+        <path d="M105,150 C105,40 600,30 787,66" fill="none" stroke="#c8632c" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#aA)"/>
+        <text x="350" y="34" font-size="11" fill="#c8632c">リアルタイム文字起こしだけ、一時トークンでブラウザ→OpenAI に直結（鍵はサーバー側のまま）</text>
+      </svg>
+      <figcaption>図3: システム構成。中核（緑）＝Cloud Run の Next.js が、外部（OpenAI＝橙／DB・Storage＝青）への窓口をすべて握る。鍵はサーバー側だけに置く。</figcaption>
+    </figure>
+
+    <div class="note"><b>要件定義書との違い（正直に）:</b> 当初は保存先・認証に Supabase、公開先に Vercel を「提案」していた。実際の今は <b>PostgreSQL ＋ Google Cloud（Cloud Run / Cloud Storage）</b> で動いていて、ログインは廃止済み。要件定義書のこの部分は提案段階の記述として残っている。</div>
+  </div>
+</section>
+
+<!-- ======================= 6. 差し替えできる設計 ======================= -->
+<section>
+  <div class="wrap">
+    <h2 id="s6"><span class="num">6</span>差し替えできる設計（保存・画像・認証・AI）</h2>
+    <p class="sec-lead">「あとで決める／あとで替える」ものは、すべて1か所に集めてある。だから手元では設定なしのまま動かせ、本番では環境変数を足すだけで、共有DB・クラウド保存に切り替わる。画面側のコードは変えなくていい。</p>
+
+    <div class="tablewrap">
+    <table>
+      <tr><th>役割</th><th>集約している場所</th><th>既定（手元・設定なし）</th><th>本番への切替（環境変数）</th></tr>
+      <tr><td class="k">データ保存</td><td><code>lib/store/</code></td><td>ローカルJSON（<code>.data/*.json</code>）</td><td><code>DATABASE_URL</code>／<code>PG*</code> があれば PostgreSQL</td></tr>
+      <tr><td class="k">イラスト画像</td><td><code>lib/images.ts</code></td><td><code>public/generated/</code> に保存</td><td><code>ASSETS_BUCKET</code> があれば Cloud Storage</td></tr>
+      <tr><td class="k">AI 呼び出し</td><td><code>lib/ai.ts</code> ＋ <code>lib/config.ts</code></td><td>—</td><td><code>OPENAI_*</code>（モデル名・画質）で変更可</td></tr>
+      <tr><td class="k">記名（誰が操作したか）</td><td><code>lib/auth.ts</code></td><td>ブラウザ保持の名前を操作ごとに送る（未設定なら「ゲスト」）</td><td>ログインは廃止済み。将来は共通ログインに差し替え</td></tr>
+    </table>
+    </div>
+
+    <div class="evidence"><b>裏付け（コードと一致）:</b> <code>lib/store/index.ts</code> は <code>DATABASE_URL</code> 等の有無で <code>Pg*Repository</code> か <code>Json*Repository</code> を選ぶ。<code>lib/images.ts</code> は <code>ASSETS_BUCKET</code> の有無で Cloud Storage かローカル保存を選ぶ。どちらも呼び出し側（画面）は同じインターフェースを使う。</div>
+
+    <div class="note"><b>なぜこの形か:</b> 持ち帰って自分のPCでオフラインでも動かせ（JSON＋ローカル画像）、本番では消えない共有先（DB＋クラウド保存）に自動で切り替わる。Cloud Run は使われないと電源が切れ、再起動で中身がまっさらに戻るため、画像とデータは“消えない置き場”に出す必要があった。</div>
+  </div>
+</section>
+
+<!-- ======================= 7. ER図 ======================= -->
+<section>
+  <div class="wrap">
+    <h2 id="s7"><span class="num">7</span>データの関係（ER図）</h2>
+    <p class="sec-lead">データは<b>3つのテーブル</b>（用語・議事録・リクエスト）だけ。スキーマは <code>knowledge_ws</code>。関連ワード・タグ・コメント・いいねは“別テーブル”にせず、<b>用語の行の中に配列やJSONとして持つ</b>。テーブル同士をつなぐ外部キーは無く、つながりはアプリ側で「名前の一致」で計算する（疎結合）。</p>
+
+    <figure class="fig">
+      <svg viewBox="0 0 900 340" font-family="sans-serif">
+        <!-- terms -->
+        <rect x="40" y="40" width="300" height="262" rx="10" fill="#e3efe9" stroke="#0f5746" stroke-width="2.5"/>
+        <rect x="40" y="40" width="300" height="32" rx="10" fill="#0f5746"/><text x="190" y="62" text-anchor="middle" font-size="14.5" font-weight="bold" fill="#fff">terms（用語）</text>
+        <text x="56" y="92"  font-size="11.5" fill="#222">id・word・description</text>
+        <text x="56" y="113" font-size="11.5" fill="#222">related_words 〔text[]〕</text>
+        <text x="56" y="134" font-size="11.5" fill="#222">tags 〔text[]〕</text>
+        <text x="56" y="155" font-size="11.5" fill="#222">image_url・image_status</text>
+        <text x="56" y="176" font-size="11.5" fill="#222">verified_by・verified_at</text>
+        <text x="56" y="197" font-size="11.5" fill="#222">liked_by 〔text[]〕</text>
+        <text x="56" y="218" font-size="11.5" fill="#222">comments 〔jsonb〕</text>
+        <text x="56" y="239" font-size="11.5" fill="#222">created_by・created_at・updated_at</text>
+        <rect x="52" y="252" width="276" height="38" rx="8" fill="#fff8e1" stroke="#b58a00"/>
+        <text x="190" y="270" text-anchor="middle" font-size="10.5" fill="#8a6a00">関連語・タグ・いいね・コメントは</text>
+        <text x="190" y="284" text-anchor="middle" font-size="10.5" fill="#8a6a00">この行の中に内包（別テーブルにしない）</text>
+        <!-- minutes -->
+        <rect x="560" y="40" width="300" height="150" rx="10" fill="#fff" stroke="#0f5746" stroke-width="2"/>
+        <rect x="560" y="40" width="300" height="32" rx="10" fill="#0f5746"/><text x="710" y="62" text-anchor="middle" font-size="14.5" font-weight="bold" fill="#fff">minutes（議事録）</text>
+        <text x="576" y="92"  font-size="11.5" fill="#222">id・title・meeting_date・attendees</text>
+        <text x="576" y="113" font-size="11.5" fill="#222">summary・agenda・body</text>
+        <text x="576" y="134" font-size="11.5" fill="#222">decisions・todos</text>
+        <text x="576" y="155" font-size="11.5" fill="#222">created_by・created_at・updated_at</text>
+        <text x="576" y="177" font-size="10.5" fill="#888">※決定事項・ToDoは1行＝1項目の文字列</text>
+        <!-- requests -->
+        <rect x="560" y="212" width="300" height="96" rx="10" fill="#fff" stroke="#0f5746" stroke-width="2"/>
+        <rect x="560" y="212" width="300" height="32" rx="10" fill="#0f5746"/><text x="710" y="234" text-anchor="middle" font-size="14.5" font-weight="bold" fill="#fff">requests（用語リクエスト）</text>
+        <text x="576" y="264" font-size="11.5" fill="#222">id・word・note</text>
+        <text x="576" y="285" font-size="11.5" fill="#222">created_by・created_at</text>
+        <!-- 疎結合の線（点線＝アプリ側で名前一致） -->
+        <path d="M560,258 C460,258 440,150 342,150" fill="none" stroke="#c8632c" stroke-width="2" stroke-dasharray="6 5"/>
+        <text x="360" y="300" font-size="11" fill="#c8632c">同じ用語を登録すると、対応するリクエストを自動で消す（word の一致）</text>
+        <path d="M560,110 C470,110 440,120 342,120" fill="none" stroke="#5b6b66" stroke-width="1.6" stroke-dasharray="3 4"/>
+        <text x="360" y="104" font-size="10.5" fill="#5b6b66">議事録の本文 → 用語抽出 → terms に登録（FKではなく処理でつながる）</text>
+      </svg>
+      <figcaption>図4: データの関係。実テーブルは terms / minutes / requests の3つだけ（外部キー無し）。点線＝DBの関係線ではなく「アプリ側で名前一致でつなぐ」ことを表す。</figcaption>
+    </figure>
+
+    <div class="note"><b>要件定義書の当初案との違い（正直に）:</b> 当初は <code>related_word</code> テーブルと <code>user</code> テーブル（Supabase Auth）に分ける関係モデルを提案していた。実際は、関連語・タグ・いいね・コメントを<b>用語の行に内包</b>し、利用者テーブルは持たない（名前はただの文字列。認証なし）。少人数・内輪利用に合わせて、つなぎはアプリ側の計算（説明文の自動リンク・共通語での2-hop・リクエストの自動解決）で実現している。</div>
+  </div>
+</section>
+
+<!-- ======================= 8. 料金と実績 ======================= -->
+<section>
+  <div class="wrap">
+    <h2 id="s8"><span class="num">8</span>料金の目安と、今できていること</h2>
+    <p class="sec-lead">費用が一番動くのは<b>イラストの画質</b>。テキストは3人・少量なら誤差。下の金額は設定モデルから自動計算した「目安（概算）」で、実際の請求は内容で変わる。</p>
+
+    <h3>1操作あたりの料金（目安・概算）</h3>
+    <div class="tablewrap">
+    <table>
+      <tr><th>操作</th><th>内訳</th><th>目安（円）</th></tr>
+      <tr><td class="k">用語を1件登録</td><td>説明・タグ（テキスト）＋イラスト1枚</td><td>約 8 円</td></tr>
+      <tr><td class="k">イラスト1枚</td><td>画質 medium（既定）</td><td>約 8 円</td></tr>
+      <tr><td class="k">議事録から1用語</td><td>説明のみ・画像なし</td><td>約 0.1 円</td></tr>
+    </table>
+    </div>
+    <p style="font-size:13.5px;color:var(--sub);margin-top:6px">※ 円換算は概算レート（1ドル=150円）。テキストは <code>gpt-5.4-nano</code>、画像は <code>gpt-image-2</code>、文字起こしは <code>gpt-4o-mini-transcribe</code>。</p>
+
+    <h3>画質を変えると、イラスト代はこう動く（一番の調整ダイヤル）</h3>
+    <figure class="fig">
+      <svg viewBox="0 0 900 180" font-family="sans-serif">
+        <text x="40" y="32" font-size="14" font-weight="bold" fill="#1d2a26">イラスト1枚の目安（円・画質ごと）</text>
+        <rect x="60" y="50"  width="10"  height="28" rx="3" fill="#0f5746"/><text x="85"  y="71"  font-size="13.5" font-weight="bold" fill="#0f5746">low ＝ 約 0.9 円</text>
+        <rect x="60" y="96"  width="92"  height="28" rx="4" fill="#e67e22"/><text x="162" y="117" font-size="13.5" font-weight="bold" fill="#b35c0e">medium ＝ 約 8 円（既定）</text>
+        <rect x="60" y="142" width="368" height="28" rx="4" fill="#c0392b"/><text x="438" y="163" font-size="13.5" font-weight="bold" fill="#c0392b">high ＝ 約 32 円</text>
+      </svg>
+      <figcaption>図5: 画質ごとのイラスト代（目安）。バー幅は比率に対応。既定は medium＝図解がくっきり見えて料金とのバランスが良い。<code>OPENAI_IMAGE_QUALITY</code> で変更可。</figcaption>
+    </figure>
+
+    <h3>今できていること（実測・手元データ）</h3>
+    <div class="cards">
+      <div class="card"><span class="icon">📖</span><h4>登録用語 51 件</h4><p>手元の保存データ（<code>.data/terms.json</code>）での件数。</p></div>
+      <div class="card"><span class="icon">🖼️</span><h4>イラスト 56 枚</h4><p>生成済み画像。クラウド保存（Cloud Storage）にも移行済み。</p></div>
+      <div class="card"><span class="icon">✅</span><h4>自動テスト 72 件</h4><p>すべてパス。型チェック0・本番ビルド成功も毎回確認。</p></div>
+      <div class="card"><span class="icon">🚀</span><h4>公開済み</h4><p>Cloud Run（東京）で稼働。最新リビジョン <code>iu-knowledge-ws-00005-8xw</code>。</p></div>
+    </div>
+    <p style="font-size:13.5px;color:var(--sub);margin-top:10px">※ 51件・56枚は手元の保存データの実測値。本番DBの件数は別途。料金は目安（概算）。</p>
+  </div>
+</section>
+
+<!-- ======================= 9. TBD ======================= -->
+<section>
+  <div class="wrap">
+    <h2 id="s9"><span class="num">9</span>これからの宿題（未確定＝TBD）</h2>
+    <p class="sec-lead">機能はひと通り動くが、要件定義書には「まだ数値を決めていない」ことが残っている。ここは断言せず、決めるべき項目として正直に並べる。</p>
+    <div class="tablewrap">
+    <table>
+      <tr><th>未確定の項目</th><th>いまの状態</th></tr>
+      <tr><td class="k">うまくいった指標</td><td>未記入。例「登録◯件」「週◯回使う」「検索◯秒以内」などは候補どまり（数値は未決定）。</td></tr>
+      <tr><td class="k">AI 利用料の上限</td><td>未決定。費用が動くのは画像なので、画質の既定（medium）で調整している。</td></tr>
+      <tr><td class="k">用語名・説明文の最大文字数</td><td>暫定の入力チェックはあるが、正式な上限は未確定。</td></tr>
+      <tr><td class="k">性能（応答時間）の目標値</td><td>未記入。一覧は速く、AI生成は「生成中」表示で待ち時間を見せる方針。</td></tr>
+    </table>
+    </div>
+    <div class="note"><b>方針:</b> これらは「決めればすぐ反映できる」もの。数字は推測で埋めず、チームで合意してから入れる（このアプリの「比喩を使わない・事実ベース」の流儀と同じ）。</div>
+  </div>
+</section>
+
+<!-- ======================= 10. 用語ミニ辞典 ======================= -->
+<section>
+  <div class="wrap">
+    <h2 id="s10"><span class="num">10</span>用語ミニ辞典</h2>
+    <p class="sec-lead">この資料に出てくる言葉を、比喩を使わず一言で。自分で人に説明するときの“手控え”。</p>
+    <div class="mini">
+      <dl>
+        <dt>Next.js（App Router）</dt><dd>画面づくりとサーバー処理を1つにまとめて作れるWebアプリの枠組み。このアプリの土台。</dd>
+        <dt>Server Action</dt><dd>ブラウザのフォームから直接呼べるサーバー側の処理。登録・編集などの“データを変える操作”はここで行う。</dd>
+        <dt>Cloud Run</dt><dd>Googleのクラウドでアプリを動かす場所。使われない間は電源を落として節約し、必要なときに起き上がる。</dd>
+        <dt>PostgreSQL</dt><dd>データを保存する共有データベース。このアプリは <code>knowledge_ws</code> という区画（スキーマ）に置く。</dd>
+        <dt>Cloud Storage</dt><dd>Googleのクラウドのファイル置き場。消えると困るイラスト画像をここに保存する。</dd>
+        <dt>環境変数</dt><dd>プログラムの外から渡す設定値。鍵や接続先をコードに直接書かず、ここで切り替える。</dd>
+        <dt>jsonb / text[]</dt><dd>PostgreSQLのデータの型。jsonb＝JSONをそのまま保存／text[]＝文字の配列（複数の語を1つの列に持てる）。</dd>
+        <dt>外部キー（FK）</dt><dd>テーブル同士を正式につなぐDBの仕組み。このアプリは使わず、アプリ側で名前を照らし合わせてつなぐ。</dd>
+        <dt>WebRTC</dt><dd>ブラウザがサーバーを介さず相手と直接やり取りする通信。リアルタイム文字起こしで使う。</dd>
+        <dt>after（Next.js）</dt><dd>画面の返事を返した“後”に裏で処理を続ける仕組み。イラスト生成を待たせないために使う。</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<footer>
+  IT用語集 — 解説書（概要・仕組み・アーキテクチャ）/ 作成日 2026-06-24 / 作成者 シオネ<br>
+  出典: <code>iUナレッジWS_要件定義書.md</code>・<code>JOURNEY.md</code>・実コード（<code>lib/ai.ts</code> / <code>lib/store/</code> / <code>lib/images.ts</code> / <code>lib/auth.ts</code> / <code>app/actions.ts</code> / <code>lib/pricing.ts</code>）・<code>docs/research/</code><br>
+  数字は一次資料の実測値。料金は設定モデルからの目安（概算）。未確定は「TBD」と明示。
+</footer>
+
+</body>
+</html>
