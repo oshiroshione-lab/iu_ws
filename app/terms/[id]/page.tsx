@@ -10,7 +10,12 @@ import {
   findBacklinks,
   linkifyText,
   findRelatedBySharedWords,
+  sortTerms,
+  filterByTags,
+  parseTagsParam,
+  toSortKey,
 } from "@/lib/terms";
+import { buildQuery } from "@/lib/url";
 import type { Term } from "@/lib/types";
 import {
   retryIllustrationAction,
@@ -19,6 +24,7 @@ import {
 } from "@/app/actions";
 import { cn } from "@/lib/cn";
 import { DeleteTermButton } from "@/components/DeleteTermButton";
+import { TermPager } from "@/components/TermPager";
 import { SubmitButton } from "@/components/SubmitButton";
 import { CommentForm } from "@/components/CommentForm";
 import { LikeButton } from "@/components/LikeButton";
@@ -38,15 +44,46 @@ import {
 
 export default async function TermDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ q?: string; tag?: string; tags?: string; sort?: string }>;
 }) {
   const { id } = await params;
+  const { q, tag, tags: tagsParam, sort } = await searchParams;
 
   // 全件を1回だけ取り、相互リンク（早引き表）と被リンクを計算する。
   const all = await termRepository.list();
   const term = all.find((t) => t.id === id);
   if (!term) notFound();
+
+  // 前後の用語（< > 送り）。ホームで見ていた並び順・絞り込みをそのまま引き継ぎ、
+  // 同じ順番・同じ絞り込みの中で隣へ移れるようにする（迷いにくく、一覧と一致する）。
+  const query = (q ?? "").trim();
+  const activeTags = parseTagsParam(tagsParam ?? tag);
+  const sortKey = toSortKey(sort);
+
+  // ホームと同じ手順（検索 → タグ絞り込み → 並び替え）で一覧を組み立て直す。
+  let ordered = query ? await termRepository.search(query) : all;
+  if (activeTags.length > 0) ordered = filterByTags(ordered, activeTags);
+  ordered = sortTerms(ordered, sortKey);
+  let pos = ordered.findIndex((t) => t.id === term.id);
+  // 絞り込みの外にある用語（関連ワードから飛んできた等）は、並び順だけ保って全件でめくる。
+  if (pos === -1) {
+    ordered = sortTerms(all, sortKey);
+    pos = ordered.findIndex((t) => t.id === term.id);
+  }
+  const prevTerm = pos > 0 ? ordered[pos - 1] : null;
+  const nextTerm =
+    pos >= 0 && pos < ordered.length - 1 ? ordered[pos + 1] : null;
+
+  // いまの並び順・絞り込みを表すクエリ文字列。< > と「一覧へ戻る」に引き継ぐ。
+  // 既定（新しい順・絞り込みなし）のときは "" になり、URLは短いままになる。
+  const listQuery = buildQuery({
+    q: query || undefined,
+    tags: activeTags.length > 0 ? activeTags.join(",") : undefined,
+    sort: sortKey === "new" ? undefined : sortKey,
+  });
 
   const index = buildWordIndex(all);
   const backlinks = findBacklinks(all, term.word);
@@ -83,7 +120,7 @@ export default async function TermDetailPage({
     <article className="mx-auto flex max-w-4xl animate-fade-in flex-col gap-12">
       <div className="flex items-center justify-between gap-2">
         <Link
-          href="/"
+          href={`/${listQuery}`}
           className={cn(
             buttonClasses({ variant: "ghost", size: "sm" }),
             "-ml-2 text-muted-foreground",
@@ -92,6 +129,13 @@ export default async function TermDetailPage({
           <ArrowLeftIcon className="h-4 w-4" />
           一覧へ戻る
         </Link>
+        {/* 前の用語 / 次の用語（ホームに戻らず隣へ切り替え。← → キーも使える）
+            並び順・絞り込みはホームから引き継ぎ、めくっても保たれる。 */}
+        <TermPager
+          prev={prevTerm ? { id: prevTerm.id, word: prevTerm.word } : null}
+          next={nextTerm ? { id: nextTerm.id, word: nextTerm.word } : null}
+          query={listQuery}
+        />
         <Link
           href={`/terms/${term.id}/edit`}
           className={buttonClasses({ variant: "outline", size: "sm" })}

@@ -52,9 +52,12 @@ const ANIM = "duration-300 ease-out";
 export function TaikoSelector({
   terms,
   orientation,
+  linkQuery = "",
 }: {
   terms: PlateTerm[];
   orientation: "vertical" | "horizontal";
+  /** 並び順・絞り込みの文脈（"?sort=name" など）。詳細ページの < > に引き継ぐ。 */
+  linkQuery?: string;
 }) {
   const router = useRouter();
   const horizontal = orientation === "horizontal";
@@ -88,7 +91,7 @@ export function TaikoSelector({
     setOpenIndex((i) =>
       i === null ? 0 : Math.min(Math.max(i + delta, 0), terms.length - 1),
     );
-  const open = (id: string) => router.push(`/terms/${id}`);
+  const open = (id: string) => router.push(`/terms/${id}${linkQuery}`);
   // 同じ札をクリックしたら閉じる（null）、違う札なら開く。
   const toggle = (i: number) => setOpenIndex((cur) => (cur === i ? null : i));
 
@@ -116,7 +119,7 @@ export function TaikoSelector({
   function openLink(id: string, extra?: string) {
     return (
       <Link
-        href={`/terms/${id}`}
+        href={`/terms/${id}${linkQuery}`}
         onClick={(e) => e.stopPropagation()}
         className={cn(
           "rounded-full bg-background px-3 py-1 text-xs font-bold text-foreground shadow transition-colors hover:bg-accent hover:text-accent-foreground",

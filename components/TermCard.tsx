@@ -7,7 +7,14 @@ import { isRecentlyAdded } from "@/lib/terms";
 import { Badge } from "@/components/ui/Badge";
 import { CheckCircleIcon } from "@/components/ui/icons";
 
-export function TermCard({ term }: { term: Term }) {
+export function TermCard({
+  term,
+  linkQuery = "",
+}: {
+  term: Term;
+  /** 並び順・絞り込みの文脈（"?sort=name" など）。詳細ページの < > に引き継ぐ。 */
+  linkQuery?: string;
+}) {
   const date = term.createdAt
     ? new Date(term.createdAt).toLocaleDateString("ja-JP")
     : "";
@@ -15,7 +22,7 @@ export function TermCard({ term }: { term: Term }) {
 
   return (
     <Link
-      href={`/terms/${term.id}`}
+      href={`/terms/${term.id}${linkQuery}`}
       className={cn(
         "group flex flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow-sm transition-all",
         "hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md",

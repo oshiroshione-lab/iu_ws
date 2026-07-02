@@ -76,6 +76,15 @@ export default async function HomePage({
     cols: gridCols === DEFAULT_GRID_COLS ? undefined : String(gridCols),
   };
 
+  // 用語詳細へのリンクに付ける「並び順・絞り込み」の文脈（?sort= など）。
+  // これで詳細ページの < > が、一覧で見ていたのと同じ順番・絞り込みでめくれる。
+  // 表示の形（view/cols）は順番に関係しないので含めない。
+  const termQuery = buildQuery({
+    q: current.q,
+    tags: current.tags,
+    sort: current.sort,
+  });
+
   // 太鼓UI（縦／横の積層）に渡す軽い形に変換する。日付や「新着」はここ（サーバー）で決める。
   const now = Date.now();
   const plates: PlateTerm[] = terms.map((t) => ({
@@ -163,13 +172,14 @@ export default async function HomePage({
       ) : viewMode === "grid" ? (
         <div className={`grid gap-4 ${GRID_COLS_CLASS[gridCols]}`}>
           {terms.map((t) => (
-            <TermCard key={t.id} term={t} />
+            <TermCard key={t.id} term={t} linkQuery={termQuery} />
           ))}
         </div>
       ) : (
         <TaikoSelector
           terms={plates}
           orientation={viewMode === "hstack" ? "horizontal" : "vertical"}
+          linkQuery={termQuery}
         />
       )}
     </div>
